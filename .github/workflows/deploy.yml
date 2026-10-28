@@ -35,6 +35,11 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Validate
+        run: |
+          npm test
+          npm run lint
+
       - name: Refresh GitHub stars snapshot
         run: npm run refresh:stars
         env:
@@ -66,3 +71,51 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v5
+
+  persist-snapshot:
+    needs: [build, deploy]
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+    permissions:
+      contents: write
+      actions: read
+    steps:
+      - name: Checkout published revision
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+
+      - name: Save a weekly copy of the published snapshot
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          last_saved=$(git log -1 --format=%ct -- public/stars-snapshot.json)
+          if [[ -n "$last_saved" ]] && (( $(date +%s) - last_saved < 604800 )); then
+            echo "The repository snapshot was saved less than seven days ago."
+            exit 0
+          fi
+
+          gh run download "$GITHUB_RUN_ID" --repo "$GITHUB_REPOSITORY" \
+            --name github-pages --dir "$RUNNER_TEMP/published-pages"
+          tar -xOf "$RUNNER_TEMP/published-pages/artifact.tar" ./stars-snapshot.json \
+            > public/stars-snapshot.json
+
+          git fetch origin main
+          if [[ "$(git rev-parse origin/main)" != "$GITHUB_SHA" ]]; then
+            echo "::notice::main changed during deployment; the next run will save the snapshot."
+            exit 0
+          fi
+
+          git add -- public/stars-snapshot.json
+          if git diff --cached --quiet; then exit 0; fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'Keep a recent copy of the published stars data' \
+            -m 'Save the successfully deployed snapshot weekly so the repository retains useful data history and regular activity.' \
+            -m $'Constraint: GITHUB_TOKEN pushes do not trigger another workflow run\nScope-risk: narrow\nTested: Snapshot artifact was built and deployed successfully'
+          git push origin HEAD:main

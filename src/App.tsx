@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useState, type Dispatch, type ReactNode, type SetStateAction } from 'react'
 import {
   AlertCircle,
   Archive,
@@ -33,6 +33,7 @@ import {
   type CuratedRepository,
 } from './curation'
 import { fetchStarredRepositories, GitHubApiError } from './github'
+import { newestSnapshot, type SnapshotCache } from './snapshot'
 import type { StarredRepository, StarsSnapshot, SyncProgress } from './types'
 
 const USERNAME = 'atxinsky'
@@ -42,11 +43,6 @@ const SELECTED_STATUSES: ActivityStatus[] = ['active', 'maintained', 'quiet', 'a
 
 type GroupMode = 'category' | 'language' | 'activity' | 'owner'
 type SortMode = 'signal' | 'stars' | 'updated' | 'starred' | 'name'
-
-type SnapshotCache = {
-  generatedAt: string | null
-  repositories: StarredRepository[]
-}
 
 const statusLabels: Record<ActivityStatus, string> = {
   active: '活跃',
@@ -74,14 +70,19 @@ const statusIcons: Record<ActivityStatus, LucideIcon> = {
 function loadCache(): SnapshotCache | null {
   try {
     const raw = localStorage.getItem(CACHE_KEY)
-    return raw ? (JSON.parse(raw) as SnapshotCache) : null
+    const cached = raw ? (JSON.parse(raw) as SnapshotCache) : null
+    return cached && Array.isArray(cached.repositories) ? cached : null
   } catch {
     return null
   }
 }
 
 function saveCache(cache: SnapshotCache) {
-  localStorage.setItem(CACHE_KEY, JSON.stringify(cache))
+  try {
+    localStorage.setItem(CACHE_KEY, JSON.stringify(cache))
+  } catch {
+    // The page can still update when browser storage is full or unavailable.
+  }
 }
 
 function sortRepos(repos: CuratedRepository[], sortMode: SortMode) {
@@ -149,15 +150,18 @@ function downloadJson(repositories: StarredRepository[], generatedAt: string | n
   URL.revokeObjectURL(url)
 }
 
-function useBundledSnapshot(setSnapshot: (snapshot: SnapshotCache) => void) {
+function useBundledSnapshot(setSnapshot: Dispatch<SetStateAction<SnapshotCache>>) {
   useEffect(() => {
+    const controller = new AbortController()
     const cached = loadCache()
-    if (cached?.repositories.length) {
-      setSnapshot(cached)
-      return
+    if (cached) {
+      setSnapshot((current) => newestSnapshot(current, cached))
     }
 
-    fetch(`${import.meta.env.BASE_URL}stars-snapshot.json`)
+    fetch(`${import.meta.env.BASE_URL}stars-snapshot.json`, {
+      cache: 'no-store',
+      signal: controller.signal,
+    })
       .then((response) => {
         if (!response.ok) {
           throw new Error('snapshot unavailable')
@@ -165,14 +169,19 @@ function useBundledSnapshot(setSnapshot: (snapshot: SnapshotCache) => void) {
         return response.json() as Promise<StarsSnapshot>
       })
       .then((snapshot) => {
-        setSnapshot({
+        if (controller.signal.aborted || !Array.isArray(snapshot.repositories)) return
+        const next = newestSnapshot(loadCache(), {
           generatedAt: snapshot.generatedAt,
-          repositories: snapshot.repositories ?? [],
+          repositories: snapshot.repositories,
         })
+        saveCache(next)
+        setSnapshot((current) => newestSnapshot(current, next))
       })
       .catch(() => {
-        setSnapshot({ generatedAt: null, repositories: [] })
+        // Keep cached or manually refreshed data when the server is unavailable.
       })
+
+    return () => controller.abort()
   }, [setSnapshot])
 }
 
