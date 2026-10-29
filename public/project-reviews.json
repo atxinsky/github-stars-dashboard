@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-10-29T08:23:23.133Z",
+  "generatedAt": "2026-10-29T08:33:01.368Z",
   "reviews": {
     "knight-l/sc-datav": {
       "review": {
@@ -24661,11 +24661,11 @@
         "promptVersion": "codex-readme-v1",
         "source": "readme",
         "repositoryId": 1128123594,
-        "pushedAt": "2026-10-29T04:14:37Z",
+        "pushedAt": "2026-10-29T08:18:48Z",
         "readmePath": "README.md",
-        "readmeSha": "4304b1ba06431be3a2e5c8e652cdedd8bac34560",
-        "inputHash": "35bdd78b249a052c4f27ee9951a0b22118e74e4d1cfef41a8be9d2897ba2b5a6",
-        "generatedAt": "2026-10-29T08:04:45.368248Z"
+        "readmeSha": "04c3bbae10c766621571734f0662717cebe42676",
+        "inputHash": "a080943f86c5e106d1a3d9c3ee8b327f16bf8ecdf7ba09b6c319f0f583ae53c0",
+        "generatedAt": "2026-10-29T08:33:01.304Z"
       },
       "sourceQuotes": [
         "one filesystem for everything an agent knows"
@@ -29978,417 +29978,6 @@
         "It hires, schedules, reports on your entire AI team."
       ]
     },
-    "totomila/agent_trader": {
-      "review": {
-        "title": "比较双模型交易代理的分析、模拟与决策记录",
-        "summary": "Agent Trader 让 DeepSeek 与 Claude 分别分析加密市场，组织多代理流水线、模拟或实盘执行、Streamlit 看板与 Discord 通知，重点展示双引擎比较和决策历史。",
-        "category": "数据/交易/金融",
-        "scenarios": [
-          "data",
-          "research"
-        ],
-        "verdict": "先观望",
-        "why": "适合研究模型交易代理如何分工与留痕，而不是直接作为自动理财工具。README 允许 AI 自主决定较高杠杆，恰好说明采用前需要独立设计约束和停止机制，不能凭生产级宣传推定安全可靠。",
-        "bestFor": [
-          "研究双模型分析与多代理决策流水线",
-          "在模拟环境对比决策记录和市场表现"
-        ],
-        "caveats": [
-          "需 Python 依赖、模型服务与市场数据条件，真实执行还需交易所权限。",
-          "默认模拟模式与实盘不同；自主杠杆和仓位决策存在明确执行风险。",
-          "README 许可写为保留全部权利，并非通用开源许可；未验证收益、风控或生产稳定性。"
-        ],
-        "setup": "需要部署",
-        "effort": "高",
-        "searchTerms": [
-          "Agent Trader",
-          "双模型交易",
-          "模拟交易代理",
-          "决策历史",
-          "多代理量化"
-        ],
-        "evidence": [
-          {
-            "label": "README：功能与条件",
-            "url": "https://github.com/totomila/agent_trader/blob/main/README.md"
-          }
-        ],
-        "checkedAt": "2026-10-29"
-      },
-      "provenance": {
-        "model": "Codex",
-        "promptVersion": "codex-readme-v1",
-        "source": "readme",
-        "repositoryId": 1185429927,
-        "pushedAt": "2026-03-23T00:41:44Z",
-        "readmePath": "README.md",
-        "readmeSha": "b3c433baf8138e5f4552ddd2f0ce52084cb36c72",
-        "inputHash": "5d4f48b2a42cf2fe98b335c6c6cbc9ad6eb2362b4194320199996cda12aa593a",
-        "generatedAt": "2026-10-29T08:16:10.032848Z"
-      },
-      "sourceQuotes": [
-        "Multi-Agent Autonomous Crypto Trading System"
-      ]
-    },
-    "atxinsky/taiji": {
-      "review": {
-        "title": "把太极课程、师承与会员业务组织成学习平台",
-        "summary": "太极圈仓库包含微信小程序/H5、管理后台和 NestJS API，README 涵盖课程、师承、会员、支付结算、学习打卡和 AI 助手等模块，并提供本地与容器部署入口。",
-        "category": "教育/学习",
-        "scenarios": [
-          "learn",
-          "build-web"
-        ],
-        "verdict": "按需使用",
-        "why": "适合查看太极垂直学习平台的产品与系统组织方式，课程、社群和运营模块放在一起具有业务参考价值。文档中的里程碑完成状态只是项目自述，不能据此确认线上、支付或真实设备已验收。",
-        "bestFor": [
-          "研究太极课程与会员运营的产品结构",
-          "查看小程序、后台与业务 API 的分层实现"
-        ],
-        "caveats": [
-          "本地需要 Node/pnpm、MySQL 8、Redis 7，容器部署还需 Docker 与 Nginx 配置。",
-          "微信、小程序、支付及模型服务需要自己的平台资质、凭据和资源条件。",
-          "尚未验证课程内容、权限、支付结算或真实小程序运行；不把 README 的 Done 当作验收证据。"
-        ],
-        "setup": "需要部署",
-        "effort": "高",
-        "searchTerms": [
-          "太极圈",
-          "太极学习平台",
-          "课程会员",
-          "微信小程序",
-          "师承管理"
-        ],
-        "evidence": [
-          {
-            "label": "README：功能与条件",
-            "url": "https://github.com/atxinsky/taiji/blob/main/README.md"
-          }
-        ],
-        "checkedAt": "2026-10-29"
-      },
-      "provenance": {
-        "model": "Codex",
-        "promptVersion": "codex-readme-v1",
-        "source": "readme",
-        "repositoryId": 1151412391,
-        "pushedAt": "2026-02-12T15:21:45Z",
-        "readmePath": "README.md",
-        "readmeSha": "eab9fe749a17b98fbfc4cf8a63ca0fd98e81549b",
-        "inputHash": "f73c62feb1a37946bc3e02ac566efe8b9d81237596fd102d21698a760c5f3b4b",
-        "generatedAt": "2026-10-29T08:16:10.032848Z"
-      },
-      "sourceQuotes": [
-        "太极拳垂直学习平台"
-      ]
-    },
-    "atxinsky/rongyi": {
-      "review": {
-        "title": "围绕多学科练习与复习建立儿童学习工作区",
-        "summary": "RongYi 面向儿童学习，README 描述数学自适应练习、英语分级与间隔复习、语文内容、错题与奖励等模块，使用 React 前端和 Express、PostgreSQL、Redis 后端。",
-        "category": "教育/学习",
-        "scenarios": [
-          "learn"
-        ],
-        "verdict": "按需使用",
-        "why": "适合研究如何把练习、错题和学习节奏整合进一个产品。功能覆盖很广，更应该先选择一个学科和年龄段检查题目、反馈与进度，而不是把题量或自适应算法名称直接视为学习效果证明。",
-        "bestFor": [
-          "研究儿童多学科练习与错题复习流程",
-          "参考英语分级、奖励和学习习惯模块的组织"
-        ],
-        "caveats": [
-          "需 Docker 或分别配置前后端、PostgreSQL 与 Redis，还要初始化数据库。",
-          "AI 模块依赖 Gemini/DeepSeek 等服务，费用及儿童资料处理方式需单独核对。",
-          "README 标为 Private project，未明确通用开源授权；题库正确性和教学效果未实测。"
-        ],
-        "setup": "需要部署",
-        "effort": "高",
-        "searchTerms": [
-          "融易成长",
-          "RongYi",
-          "儿童学习",
-          "错题复习",
-          "多学科练习"
-        ],
-        "evidence": [
-          {
-            "label": "README：功能与条件",
-            "url": "https://github.com/atxinsky/RongYi/blob/main/README.md"
-          }
-        ],
-        "checkedAt": "2026-10-29"
-      },
-      "provenance": {
-        "model": "Codex",
-        "promptVersion": "codex-readme-v1",
-        "source": "readme",
-        "repositoryId": 1142116557,
-        "pushedAt": "2026-06-28T13:47:21Z",
-        "readmePath": "README.md",
-        "readmeSha": "7550e5d93d4877b54640ed1c2dbc6eaaab3d2630",
-        "inputHash": "c9ee40e831cd35182c3d9cf7475bc2f3e45ecc98d3df70ce464293dd16e917c5",
-        "generatedAt": "2026-10-29T08:16:10.032848Z"
-      },
-      "sourceQuotes": [
-        "面向儿童的 AI 自适应学习平台"
-      ]
-    },
-    "atxinsky/futures-testv2": {
-      "review": {
-        "title": "把期货回测与市场指标放到前后端分离的看板",
-        "summary": "futures-testV2 以 React 与 FastAPI 重构期货回测界面，使用 TqSdk 获取实时或历史行情，README 还描述主连回测、宏观市场指标与 Docker 启动流程。",
-        "category": "数据/交易/金融",
-        "scenarios": [
-          "data",
-          "research"
-        ],
-        "verdict": "按需使用",
-        "why": "适合已有期货研究需求、想把行情和回测流程做成操作界面的人。界面与服务拆分便于扩展，但文档部分功能仍以省略段落代替，采用前应拿真实策略核对数据口径和回测执行过程。",
-        "bestFor": [
-          "查看期货主连回测的前后端整合方式",
-          "用行情与宏观指标界面辅助研究过程"
-        ],
-        "caveats": [
-          "开发后端要求 Python 3.11+，前端需 Node 工具链；快捷启动脚本主要面向 Windows 与 Docker。",
-          "需要 TqSdk 账号，历史数据权限与费用应按服务条件确认。",
-          "Docker 与开发端口不同，文档细节不完整；未验证回测结果、主连处理或实时行情。"
-        ],
-        "setup": "需要部署",
-        "effort": "高",
-        "searchTerms": [
-          "期货回测系统v2",
-          "TqSdk",
-          "主连回测",
-          "FastAPI看板",
-          "宏观指标"
-        ],
-        "evidence": [
-          {
-            "label": "README：功能与条件",
-            "url": "https://github.com/atxinsky/futures-testV2/blob/main/README.md"
-          }
-        ],
-        "checkedAt": "2026-10-29"
-      },
-      "provenance": {
-        "model": "Codex",
-        "promptVersion": "codex-readme-v1",
-        "source": "readme",
-        "repositoryId": 1132242796,
-        "pushedAt": "2026-01-30T05:27:55Z",
-        "readmePath": "README.md",
-        "readmeSha": "8860600cccfa2a0f111129b578d74e26bc59917b",
-        "inputHash": "4d877ef675d3f83c3bbf825dc7561bea0027c9a5ee8900a5eb68da7103d646b7",
-        "generatedAt": "2026-10-29T08:16:10.032848Z"
-      },
-      "sourceQuotes": [
-        "期货回测系统 v2.0"
-      ]
-    },
-    "atxinsky/ledger-style-site": {
-      "review": {
-        "title": "保存 Ledger 风格网页的设计复刻参考",
-        "summary": "仓库简介称这是参考 brand.ledger.com 视觉风格的网页，强调极简、高对比与技术感排版；目前没有可读取的 README，无法据此确认页面、组件或部署能力。",
-        "category": "网站复刻/设计提取",
-        "scenarios": [
-          "build-web"
-        ],
-        "verdict": "先观望",
-        "why": "适合作为之前收藏的视觉方向线索，后续找网页参考时容易定位。现有资料只有简介，下一步应打开实际页面或检查代码后再评价还原范围和可复用程度，不把设计描述当成功能交付。",
-        "bestFor": [
-          "查找 Ledger 风格的网页视觉参考",
-          "定位需要补充演示与说明的设计收藏"
-        ],
-        "caveats": [
-          "README 不存在，安装步骤、依赖、部署地址和维护范围均未核实。",
-          "品牌样式与素材的使用条件需要单独确认，公开仓库不自动授予品牌使用权。",
-          "尚未运行项目或对照原站，无法承诺视觉还原与交互完整性。"
-        ],
-        "setup": "开发者工具",
-        "effort": "中",
-        "searchTerms": [
-          "Ledger风格",
-          "极简网页",
-          "技术排版",
-          "视觉复刻",
-          "资料有限"
-        ],
-        "evidence": [
-          {
-            "label": "仓库简介：资料有限",
-            "url": "https://github.com/atxinsky/ledger-style-site"
-          }
-        ],
-        "checkedAt": "2026-10-29"
-      },
-      "provenance": {
-        "model": "Codex",
-        "promptVersion": "codex-readme-v1",
-        "source": "repository-metadata",
-        "repositoryId": 1125186409,
-        "pushedAt": "2025-12-30T09:36:22Z",
-        "readmePath": null,
-        "readmeSha": null,
-        "inputHash": "7f2d899d597955d223f06e771494494592e1bb0ccc095ba309d51e4cd21cce80",
-        "generatedAt": "2026-10-29T08:16:10.032848Z"
-      },
-      "sourceQuotes": []
-    },
-    "atxinsky/can-run": {
-      "review": {
-        "title": "查看 BMNR 持有 ETH 的进度与交易日估算原型",
-        "summary": "can-run 的 README 描述 Streamlit 面板，汇总 BMNR 的 ETH 持仓、价格、购买速度和目标进度，并比较交易日与日历日的时间估算；说明与 eth-dashboard 相同。",
-        "category": "数据/交易/金融",
-        "scenarios": [
-          "data",
-          "research"
-        ],
-        "verdict": "先观望",
-        "why": "适合研究怎样把公司持仓、行情与目标进度放到一张分析面板中。两个仓库说明相同，选用前先确认哪一个是当前维护版本；趋势外推只是基于假设的估算，不能据此预测公司行为或投资回报。",
-        "bestFor": [
-          "参考持仓进度与交易日对比图的设计",
-          "检查 ETH Treasury 数据源与计算口径"
-        ],
-        "caveats": [
-          "运行需要 Python/Streamlit 及外部行情、持仓和链上数据服务。",
-          "README 含疑似明文 API 凭据，使用前需清理并确认轮换，不应直接沿用预置配置。",
-          "数据修复和测试通过均是作者自述，未独立核对持仓、成本、目标或 ETA 计算。"
-        ],
-        "setup": "需要部署",
-        "effort": "高",
-        "searchTerms": [
-          "can-run",
-          "BMNR",
-          "ETH Treasury",
-          "交易日估算",
-          "持仓进度"
-        ],
-        "evidence": [
-          {
-            "label": "README：功能与条件",
-            "url": "https://github.com/atxinsky/can-run/blob/main/README.md"
-          }
-        ],
-        "checkedAt": "2026-10-29"
-      },
-      "provenance": {
-        "model": "Codex",
-        "promptVersion": "codex-readme-v1",
-        "source": "readme",
-        "repositoryId": 933565303,
-        "pushedAt": "2025-08-19T07:15:45Z",
-        "readmePath": "README.md",
-        "readmeSha": "a5a4d387740dce0c30235f0fb5a51139c7fbb358",
-        "inputHash": "dca6f631a673720ef52cbed7037ab15e9329cc41938559ddd39d5c6b91992fca",
-        "generatedAt": "2026-10-29T08:16:10.032848Z"
-      },
-      "sourceQuotes": [
-        "美股交易日核心功能"
-      ]
-    },
-    "atxinsky/eth-dashboard": {
-      "review": {
-        "title": "研究 ETH Treasury 跟踪看板的数据合并与可视化",
-        "summary": "eth-dashboard 介绍 BMNR/ETH 持仓跟踪、时区统一、历史数据合并与目标进度展示，使用 Streamlit，数据来自持仓网站、行情和链上接口；当前说明与 can-run 完全一致。",
-        "category": "数据/交易/金融",
-        "scenarios": [
-          "data",
-          "research"
-        ],
-        "verdict": "先观望",
-        "why": "它的参考价值在把多源数据和进度估算呈现到同一界面，尤其可查看历史数据保护与交易日合并思路。相同说明不足以判断两个仓库的代码差异，应先识别有效版本，再做字段和计算验证。",
-        "bestFor": [
-          "参考多源持仓数据的合并展示流程",
-          "比较交易日与原始时间序列的图表表达"
-        ],
-        "caveats": [
-          "需 Python/Streamlit 和可用数据源，外部接口权限、配额与费用另行确认。",
-          "README 出现疑似明文 API 凭据，应清理并确认轮换；评价不包含这些值。",
-          "目标线和时间估算依赖假设，未验证历史修正、数据准确性或实际可运行状态。"
-        ],
-        "setup": "需要部署",
-        "effort": "高",
-        "searchTerms": [
-          "eth-dashboard",
-          "ETH持仓看板",
-          "BMNR数据合并",
-          "交易日对比",
-          "Treasury跟踪"
-        ],
-        "evidence": [
-          {
-            "label": "README：功能与条件",
-            "url": "https://github.com/atxinsky/eth-dashboard/blob/main/README.md"
-          }
-        ],
-        "checkedAt": "2026-10-29"
-      },
-      "provenance": {
-        "model": "Codex",
-        "promptVersion": "codex-readme-v1",
-        "source": "readme",
-        "repositoryId": 1040233378,
-        "pushedAt": "2025-08-18T16:53:40Z",
-        "readmePath": "README.md",
-        "readmeSha": "a5a4d387740dce0c30235f0fb5a51139c7fbb358",
-        "inputHash": "4b11c0295b6808f3fd834c45eacace94e0a501f1c2a4e9d2c329cf47ef1390eb",
-        "generatedAt": "2026-10-29T08:16:10.032848Z"
-      },
-      "sourceQuotes": [
-        "历史数据保护"
-      ]
-    },
-    "atxinsky/usclavalab-learning-gateway": {
-      "review": {
-        "title": "定位一个仍需补充业务说明的 Lovable 前端项目",
-        "summary": "该仓库 README 仍是 Lovable 默认项目说明，能确认采用 Vite、React、TypeScript、shadcn-ui 与 Tailwind，并给出开发和发布方式，未描述实际学习产品功能。",
-        "category": "前端组件/网页产品",
-        "scenarios": [
-          "build-web"
-        ],
-        "verdict": "先观望",
-        "why": "适合作为可继续编辑的前端工程入口，但仅凭仓库名称不能认定已经有课程、账号或学习评估能力。准备使用时先查看页面与业务代码、补齐产品说明，再判断能复用哪些部分。",
-        "bestFor": [
-          "继续编辑已有 Lovable 前端工程",
-          "检查学习入口原型的实际页面与待补文档"
-        ],
-        "caveats": [
-          "本地开发需 Node.js 与 npm，README 没有给出具体运行版本和业务配置。",
-          "Lovable 项目发布与本地运行是两条不同路径，平台访问与费用需另核。",
-          "未核对后端、账号权限和真实课程数据，也未运行页面或验收业务流程。"
-        ],
-        "setup": "开发者工具",
-        "effort": "中",
-        "searchTerms": [
-          "USC学习入口",
-          "Lovable前端",
-          "React原型",
-          "学习网站说明待补",
-          "项目骨架"
-        ],
-        "evidence": [
-          {
-            "label": "README：功能与条件",
-            "url": "https://github.com/atxinsky/usclavalab-learning-gateway/blob/main/README.md"
-          }
-        ],
-        "checkedAt": "2026-10-29"
-      },
-      "provenance": {
-        "model": "Codex",
-        "promptVersion": "codex-readme-v1",
-        "source": "readme",
-        "repositoryId": 1039056573,
-        "pushedAt": "2025-08-16T11:40:41Z",
-        "readmePath": "README.md",
-        "readmeSha": "45a4128721aab35403e0a31e7fd5e9dd9bba1fca",
-        "inputHash": "f659180e7708c5100fe98382b76330c922b17e46be2466c24c74c3f119f74232",
-        "generatedAt": "2026-10-29T08:16:10.032848Z"
-      },
-      "sourceQuotes": [
-        "This project is built with:"
-      ]
-    },
     "traderalice/openalice": {
       "review": {
         "title": "把市场研究与模拟交易留在本地工作区",
@@ -32383,6 +31972,163 @@
       },
       "sourceQuotes": [
         "接入任何能发 HTTP 请求的系统来驱动状态"
+      ]
+    },
+    "joeseesun/qiaomu-ui-learn-dsh": {
+      "review": {
+        "title": "在 DSH 边看设计参考边练习 UI 判断",
+        "summary": "把设计参考图库、双语 UI 词典、风格图鉴和审美测验放进 DeepSeek Harness，支持收藏、评分与点评导出 Markdown，适合把看到的设计转成可复习的判断记录。",
+        "category": "教育/学习",
+        "scenarios": [
+          "learn",
+          "build-web"
+        ],
+        "verdict": "值得先试",
+        "why": "它比只保存截图更有用的地方，是把词汇、练习和自己的点评连起来，适合持续学习设计表达；资料数量不等于已经掌握审美，仍要结合真实界面解释为什么这样设计。",
+        "bestFor": [
+          "想提高 UI 观察与表达能力的开发者",
+          "希望积累设计参考和点评笔记的产品同事"
+        ],
+        "caveats": [
+          "要求 DeepSeek Harness 0.2.1-rc.3，需核对 Release 摘要后安装 bundle，联动 Home 另需 v1 provider 服务。",
+          "图库缩略图与预览按需联网；共用 DSH_HOME 的 profile 默认共享学习数据，需配置目录才能隔离。",
+          "README 仅报告 macOS 等特定验收范围；本次依据源码说明评价，未实测其他系统或复核图库内容。"
+        ],
+        "setup": "本地安装",
+        "effort": "低",
+        "evidence": [
+          {
+            "label": "项目说明与使用条件",
+            "url": "https://github.com/joeseesun/qiaomu-ui-learn-dsh/blob/main/README.md"
+          }
+        ],
+        "checkedAt": "2026-10-29",
+        "searchTerms": [
+          "乔木UI学习",
+          "DSH",
+          "UI词典",
+          "审美测验",
+          "设计参考"
+        ]
+      },
+      "provenance": {
+        "model": "Codex",
+        "promptVersion": "codex-readme-v1",
+        "source": "readme",
+        "repositoryId": 1435757109,
+        "pushedAt": "2026-10-28T03:26:53Z",
+        "readmePath": "README.md",
+        "readmeSha": "d739236a002b5efc4bcb2d3bff71aeaaeba0dabe",
+        "inputHash": "0a6116a5e4e53240c9f3423e4d41012f607212c52a119feb6cbf2e7062337867",
+        "generatedAt": "2026-10-29T08:32:02Z"
+      },
+      "sourceQuotes": [
+        "审美测验：组件、风格或混合练习，键盘作答、掌握状态与复习记录。"
+      ]
+    },
+    "joeseesun/qiaomu-home-dsh": {
+      "review": {
+        "title": "打开 DSH 先找回会话并安排今天重点",
+        "summary": "为 DeepSeek Harness 提供可布置起点页，集中会话搜索、最近工作、今日重点和待办，并可切换记录、专注与探索组件，适合把分散入口收拢到日常开始工作的地方。",
+        "category": "移动/桌面应用",
+        "scenarios": [
+          "automation",
+          "devices"
+        ],
+        "verdict": "值得先试",
+        "why": "价值在于减少打开工具后寻找上下文的动作，而不是让首页堆满组件；建议先保留会话与今日重点，再按习惯添加专注或记录卡片，避免维护新的工作清单负担。",
+        "bestFor": [
+          "每天在 DSH 继续旧会话的知识工作者",
+          "希望统一任务与常用入口的个人用户"
+        ],
+        "caveats": [
+          "需支持本地 bundle 的 DeepSeek Harness profile，当前版本说明对应 0.2.1-rc.3，尚非插件市场安装。",
+          "个人数据存在当前浏览器环境 localStorage，不自动跨设备或工作区同步；壁纸、图标与天气涉及明确外部服务。",
+          "README 的顶部预览是示意图，移动端尚未验证；本次未在用户当前 profile 复测会话与待办交互。"
+        ],
+        "setup": "本地安装",
+        "effort": "低",
+        "evidence": [
+          {
+            "label": "项目说明与使用条件",
+            "url": "https://github.com/joeseesun/qiaomu-home-dsh/blob/main/README.md"
+          }
+        ],
+        "checkedAt": "2026-10-29",
+        "searchTerms": [
+          "乔木Home",
+          "DSH起点页",
+          "会话搜索",
+          "今日重点",
+          "专注计时"
+        ]
+      },
+      "provenance": {
+        "model": "Codex",
+        "promptVersion": "codex-readme-v1",
+        "source": "readme",
+        "repositoryId": 1398256814,
+        "pushedAt": "2026-10-28T03:26:39Z",
+        "readmePath": "README.md",
+        "readmeSha": "156b4fe358fe421c3ad2293ac411ea83fdbd1a61",
+        "inputHash": "77b0532aa7daeb71b87031cf2d78fdac3ec460f2ea0ff22f7f472f74555b514f",
+        "generatedAt": "2026-10-29T08:32:02Z"
+      },
+      "sourceQuotes": [
+        "会话全文搜索、最近会话、最多三项今日重点、待办、常用入口"
+      ]
+    },
+    "joeseesun/qiaomu-rss-dsh": {
+      "review": {
+        "title": "在 DSH 阅读 RSS 时直接带文章向 AI 追问",
+        "summary": "将精选与个人 RSS 订阅、原文和已有译文或改写放进 Harness 阅读区，并连接带文章上下文的原生 AI 对话，支持 OPML 迁移，适合阅读外文资料时边看边问。",
+        "category": "媒体/内容处理",
+        "scenarios": [
+          "research",
+          "learn",
+          "content"
+        ],
+        "verdict": "值得先试",
+        "why": "把文章和讨论保持在同一工作区，适合需要解释段落、比较观点和继续追问的阅读任务；已有转写与模型生成版本应区分来源，不能把改写当成作者原文或可靠事实。",
+        "bestFor": [
+          "需要阅读外文博客与播客转写的研究者",
+          "希望边读订阅文章边讨论的 DSH 用户"
+        ],
+        "caveats": [
+          "需受支持的 Harness 0.2.1-rc.2 或 rc.3 并安装 Release bundle；普通阅读不需模型密钥，伴读与缺失版本生成需宿主模型和额度。",
+          "链接收录实验室需邀请码，提交链接与生成改写会在配置的乔木服务公开收录；播客只取上游已有转写，覆盖非全量。",
+          "不提供 Obsidian 式笔记、划线保存或日记写入；本次未在用户当前环境复测阅读、伴读与上游持续可用性。"
+        ],
+        "setup": "本地安装",
+        "effort": "中",
+        "evidence": [
+          {
+            "label": "项目说明与使用条件",
+            "url": "https://github.com/joeseesun/qiaomu-rss-dsh/blob/main/README.md"
+          }
+        ],
+        "checkedAt": "2026-10-29",
+        "searchTerms": [
+          "乔木RSS",
+          "DSH伴读",
+          "RSS订阅",
+          "播客转写",
+          "OPML"
+        ]
+      },
+      "provenance": {
+        "model": "Codex",
+        "promptVersion": "codex-readme-v1",
+        "source": "readme",
+        "repositoryId": 1396833540,
+        "pushedAt": "2026-10-28T06:26:41Z",
+        "readmePath": "README.md",
+        "readmeSha": "2f4fb85c9b3989131ce7f06f7a58b39d077ff0db",
+        "inputHash": "f41d8c372cdf11514e84508f4036b7002f79ff392c86a82ab26076eb47d4b2e4",
+        "generatedAt": "2026-10-29T08:32:02Z"
+      },
+      "sourceQuotes": [
+        "订阅列表、文章正文、原生 AI 对话在同一工作区。"
       ]
     }
   }
