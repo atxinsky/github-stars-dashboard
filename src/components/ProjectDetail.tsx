@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { ArrowUpRight, Check, ExternalLink, FileCheck2, Flag, NotebookPen, Star, TriangleAlert, X } from 'lucide-react'
 import { compactNumber, formatDate } from '../curation'
-import type { LibraryRepository } from '../discovery'
+import { reviewEvidenceLabel, type LibraryRepository } from '../discovery'
 import { categoryIconElement } from '../icons'
 import { PERSONAL_STATUS_LABELS, type PersonalEntry, type PersonalStatus } from '../personal'
 
@@ -36,8 +36,13 @@ export function ProjectDetail({ repo, entry, mobileOpen, onClose, onSave }: {
         </section>
         <div className="detail-facts"><div><small>使用门槛</small><strong>{repo.review.effort} · {repo.review.setup}</strong></div><div><small>维护情况</small><strong>{repo.archived ? '已归档' : repo.disabled ? '已停用' : repo.pushedDaysAgo === null ? '更新信息缺失' : repo.pushedDaysAgo > 365 ? '较久未更新' : '近一年有更新'}</strong><span>最近推送 {formatDate(repo.pushedAt)}</span></div></div>
         <section className="detail-section sources-section">
-          <h3>来源与核对</h3>
-          <p className="evidence-explainer">{repo.reviewed ? `已阅读项目说明，核对于 ${repo.review.checkedAt}。评价基于文档，尚未部署实测。` : '当前根据仓库简介和标签初筛；具体功能、费用与效果需要进一步核对。'}</p>
+          <h3>评价依据与来源</h3>
+          <p className="evidence-explainer">{reviewEvidenceLabel(repo)}。{repo.reviewSource === 'editorial'
+            ? `说明解读日期 ${repo.review.checkedAt}，尚未部署实测。`
+            : repo.reviewSource === 'ai'
+              ? `由 ${repo.generatedReview?.provenance.model} 生成于 ${repo.generatedReview?.provenance.generatedAt.slice(0, 10)}。${repo.generatedReview?.provenance.source === 'readme' ? '基于项目 README 分析，尚未部署实测。' : '仅取得仓库元数据，信息不足的部分保留限制，不代表已读取 README 或实测。'}`
+              : '详细评价尚在生成；当前仅依据仓库简介与标签初筛，暂不据此承诺功能和效果。'}</p>
+          {repo.generatedReview?.sourceQuotes.length ? <details><summary>查看原始依据摘录</summary>{repo.generatedReview.sourceQuotes.map((quote, index) => <blockquote key={index} style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{quote}</blockquote>)}</details> : null}
           {repo.review.evidence.map((source) => <a href={source.url} target="_blank" rel="noreferrer" key={source.url}><FileCheck2 size={14} /><span>{source.label}</span><ExternalLink size={12} /></a>)}
           <a href={repo.htmlUrl} target="_blank" rel="noreferrer"><ArrowUpRight size={14} /><span>在 GitHub 查看项目</span></a>
         </section>

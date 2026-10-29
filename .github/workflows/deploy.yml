@@ -5,8 +5,8 @@ on:
     branches: [main]
   workflow_dispatch:
   schedule:
-    # Runs every day at 09:17 Asia/Shanghai. GitHub cron uses UTC.
-    - cron: '17 1 * * *'
+    # Refresh public stars hourly, at minute 17. Reviews are written by local Codex.
+    - cron: '17 * * * *'
 
 permissions:
   contents: read
@@ -45,6 +45,9 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_STARS_USER: atxinsky
+
+      - name: Validate source-backed review catalog
+        run: npm run validate:reviews
 
       - name: Build
         run: npm run build

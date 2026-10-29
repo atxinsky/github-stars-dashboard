@@ -9,6 +9,8 @@
     "lint": "eslint .",
     "test": "node --experimental-strip-types --test tests/*.test.ts",
     "refresh:stars": "node scripts/fetch-stars.mjs",
+    "prepare:reviews": "node --experimental-strip-types scripts/prepare-review-sources.mjs",
+    "validate:reviews": "node --experimental-strip-types scripts/validate-reviews.mjs",
     "preview": "vite preview"
   },
   "dependencies": {

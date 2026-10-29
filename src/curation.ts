@@ -23,6 +23,12 @@ const DAY = 24 * 60 * 60 * 1000
 
 export const CATEGORY_DEFINITIONS: CategoryDefinition[] = [
   {
+    name: '机器学习/计算机视觉',
+    description: '传统机器学习、小样本学习、图像识别与视觉研究工具。',
+    intent: '适合比较机器学习算法、复现实验和构建图像识别流程。',
+    keywords: ['few-shot learning', 'meta-learning', 'computer vision', 'image classification', 'object detection', '小样本学习', '图像分类', '目标检测', '计算机视觉'],
+  },
+  {
     name: '游戏/娱乐',
     description: '游戏移植、模拟器、游戏引擎与个人娱乐工具。',
     intent: '适合找游戏移植、在不同设备上玩游戏，以及研究游戏兼容性。',

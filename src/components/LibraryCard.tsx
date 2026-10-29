@@ -1,6 +1,6 @@
 import { BookmarkCheck, BookmarkPlus, ChevronRight, FileCheck2, FileSearch, Star, TriangleAlert } from 'lucide-react'
 import { compactNumber } from '../curation'
-import type { LibraryRepository } from '../discovery'
+import { reviewEvidenceLabel, type LibraryRepository } from '../discovery'
 import { categoryIconElement } from '../icons'
 import { PERSONAL_STATUS_LABELS, type PersonalStatus } from '../personal'
 
@@ -24,7 +24,7 @@ export function LibraryCard({ repo, selected, status, onSelect, onTry }: {
       </button>
       <p className="card-caveat"><TriangleAlert size={14} /><span>{repo.review.caveats[0]}</span></p>
       <footer className="card-footer">
-        <span className={`evidence-label${repo.reviewed ? ' checked' : ''}`}><EvidenceIcon size={14} />{repo.reviewed ? '已核对说明 · 未实测' : '简介初筛 · 待核实'}</span>
+        <span className={`evidence-label${repo.reviewed ? ' checked' : ''}`}><EvidenceIcon size={14} />{reviewEvidenceLabel(repo)}</span>
         <span className="star-count" title="GitHub 收藏数量，不代表质量或实测评分"><Star size={13} />{compactNumber(repo.stargazersCount)}</span>
         <button className={`save-project${status === 'try' ? ' saved' : ''}`} onClick={manageOnly ? onSelect : onTry} aria-label={`${manageOnly ? '管理状态' : status === 'try' ? '移出待尝试' : '加入待尝试'} ${repo.fullName}`}>
           {status === 'try' ? <BookmarkCheck size={15} /> : <BookmarkPlus size={15} />}

@@ -1,6 +1,7 @@
 import { curateRepos, getCategoryDefinition, type CuratedRepository } from './curation.ts'
 import { EDITORIAL_REVIEWS, type EditorialReview } from './reviews.ts'
 import type { StarredRepository } from './types.ts'
+import type { GeneratedReview, ReviewCatalog } from './reviewCatalog.ts'
 
 export const SCENARIOS = [
   { id: 'build-web', label: '做网站', description: '从参考网页、设计系统到可以修改的前端。', keywords: ['网站', '网页', '落地页', '前端', '界面', 'website', 'frontend', 'design', 'clone'] },
@@ -16,6 +17,8 @@ export const SCENARIOS = [
 export type LibraryRepository = CuratedRepository & {
   review: EditorialReview
   reviewed: boolean
+  reviewSource: 'editorial' | 'ai' | 'metadata'
+  generatedReview?: GeneratedReview
 }
 
 type CategoryGuide = {
@@ -79,11 +82,13 @@ function initialReview(repo: CuratedRepository): EditorialReview {
   }
 }
 
-export function buildLibrary(repos: StarredRepository[]): LibraryRepository[] {
+export function buildLibrary(repos: StarredRepository[], catalog?: ReviewCatalog | null): LibraryRepository[] {
   return curateRepos(repos).map((repo) => {
     const editorial = EDITORIAL_REVIEWS[repo.fullName.toLowerCase()]
-    const assessment = editorial ?? initialReview(repo)
-    const review: EditorialReview = editorial && (repo.archived || repo.disabled)
+    const candidate = catalog?.reviews[repo.fullName.toLowerCase()]
+    const generated = candidate?.provenance.repositoryId === repo.id ? candidate : undefined
+    const assessment = generated?.review ?? editorial ?? initialReview(repo)
+    const review: EditorialReview = (editorial || generated) && (repo.archived || repo.disabled)
       ? { ...assessment, verdict: '先观望', caveats: ['当前仓库已归档或停用，采用前先确认可用版本与维护接替。', ...assessment.caveats] }
       : assessment
     const category = getCategoryDefinition(review.category)
@@ -94,9 +99,18 @@ export function buildLibrary(repos: StarredRepository[]): LibraryRepository[] {
       categoryIntent: category.intent,
       curationNote: review.why,
       review,
-      reviewed: Boolean(editorial),
+      reviewed: Boolean(editorial || generated),
+      reviewSource: generated ? 'ai' : editorial ? 'editorial' : 'metadata',
+      generatedReview: generated,
     }
   })
+}
+
+export function reviewEvidenceLabel(repo: LibraryRepository): string {
+  if (repo.reviewSource === 'editorial') return '项目说明解读 · 未实测'
+  if (repo.reviewSource === 'ai') return repo.generatedReview?.provenance.source === 'readme'
+    ? 'AI 评价 · 基于 README' : 'AI 评价 · 资料有限'
+  return '待生成详细评价'
 }
 
 type SearchConcept = { pattern: RegExp; terms: string[]; scenario?: string }

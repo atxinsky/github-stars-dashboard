@@ -32,6 +32,11 @@ test('implementation language alone never invents a functional category', () => 
   }
 })
 
+test('few-shot visual learning research is distinct from language-model applications', () => {
+  const repo = repository({ name: 'LibFewShot', description: 'A comprehensive library for few-shot learning', topics: ['computer-vision', 'meta-learning'] })
+  assert.equal(classifyRepo(repo).name, '机器学习/计算机视觉')
+})
+
 test('specific description beats frontend and generic agent topics for design extraction', () => {
   const repo = repository({ name: 'dembrandt', description: 'Extract any website design system into tokens', topics: ['react', 'agent', 'typescript'] })
   assert.equal(classifyRepo(repo).name, '网站复刻/设计提取')
@@ -149,4 +154,53 @@ test('category guidance does not fabricate exercise generation or short-drama ca
   const library = buildLibrary([tutor, map, video, exerciseTutorial])
   assert.deepEqual(searchLibrary(library, '资料出题').map((repo) => repo.fullName), [tutor.fullName])
   assert.equal(searchLibrary(library, '短剧').length, 0)
+})
+
+test('generated reviews replace pending metadata with their own category, value and provenance', async () => {
+  const { EDITORIAL_REVIEWS } = await import('../src/reviews.ts')
+  const { reviewEvidenceLabel } = await import('../src/discovery.ts')
+  const generatedReview = {
+    review: { ...structuredClone(EDITORIAL_REVIEWS['hkuds/deeptutor']), title: '围绕资料出题和复习的 AI 学习工具' },
+    provenance: { model: 'Codex', promptVersion: 'v1', source: 'readme' as const, repositoryId: agent.id, pushedAt: agent.pushedAt, readmePath: 'README.md', readmeSha: 'a'.repeat(40), inputHash: 'b'.repeat(64), generatedAt: '2026-10-29T10:00:00Z' },
+    sourceQuotes: ['Generate questions based on learning materials.'],
+  }
+  const catalog = { version: 1 as const, generatedAt: '2026-10-29T10:00:00Z', reviews: { [agent.fullName.toLowerCase()]: generatedReview } }
+  const [entry] = buildLibrary([agent], catalog)
+  assert.equal(entry.reviewSource, 'ai')
+  assert.equal(entry.reviewed, true)
+  assert.equal(entry.category, '教育/学习')
+  assert.equal(entry.review.title, generatedReview.review.title)
+  assert.equal(entry.generatedReview, generatedReview)
+  assert.equal(reviewEvidenceLabel(entry), 'AI 评价 · 基于 README')
+})
+
+test('AI reviews based only on metadata are detailed but retain the limited-information label', async () => {
+  const { EDITORIAL_REVIEWS } = await import('../src/reviews.ts')
+  const { reviewEvidenceLabel } = await import('../src/discovery.ts')
+  const limited = {
+    review: structuredClone(EDITORIAL_REVIEWS['hkuds/deeptutor']),
+    provenance: { model: 'Codex', promptVersion: 'v1', source: 'repository-metadata' as const, repositoryId: agent.id, pushedAt: agent.pushedAt, readmePath: null, readmeSha: null, inputHash: 'b'.repeat(64), generatedAt: '2026-10-29T10:00:00Z' },
+    sourceQuotes: [],
+  }
+  const [entry] = buildLibrary([agent], { version: 1, generatedAt: '2026-10-29T10:00:00Z', reviews: { [agent.fullName]: limited } })
+  assert.equal(entry.reviewed, true)
+  assert.equal(entry.reviewSource, 'ai')
+  assert.equal(reviewEvidenceLabel(entry), 'AI 评价 · 资料有限')
+})
+
+test('fresh generated reviews supersede legacy editorial text and stale names cannot change identities', async () => {
+  const { EDITORIAL_REVIEWS } = await import('../src/reviews.ts')
+  const template = {
+    review: { ...structuredClone(EDITORIAL_REVIEWS['hkuds/deeptutor']), title: 'A newer generated review replaces legacy editorial work' },
+    provenance: { model: 'Codex', promptVersion: 'v1', source: 'repository-metadata' as const, repositoryId: tutor.id, pushedAt: tutor.pushedAt, readmePath: null, readmeSha: null, inputHash: 'b'.repeat(64), generatedAt: '2026-10-29T10:00:00Z' },
+    sourceQuotes: [],
+  }
+  const [editorial] = buildLibrary([tutor], { version: 1, generatedAt: '2026-10-29T10:00:00Z', reviews: { [tutor.fullName.toLowerCase()]: template } })
+  assert.equal(editorial.reviewSource, 'ai')
+  assert.equal(editorial.review.title, template.review.title)
+  const [fallback] = buildLibrary([tutor])
+  assert.equal(fallback.reviewSource, 'editorial')
+  const [pending] = buildLibrary([agent], { version: 1, generatedAt: '2026-10-29T10:00:00Z', reviews: { [agent.fullName]: template } })
+  assert.equal(pending.reviewSource, 'metadata')
+  assert.equal(pending.reviewed, false)
 })
