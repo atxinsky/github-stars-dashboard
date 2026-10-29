@@ -1,4 +1,4 @@
-import type { StarredRepository } from './types'
+import type { StarredRepository } from './types.ts'
 
 export type ActivityStatus = 'active' | 'maintained' | 'quiet' | 'archived' | 'fork'
 
@@ -22,6 +22,24 @@ export type CuratedRepository = StarredRepository & {
 const DAY = 24 * 60 * 60 * 1000
 
 export const CATEGORY_DEFINITIONS: CategoryDefinition[] = [
+  {
+    name: '游戏/娱乐',
+    description: '游戏移植、模拟器、游戏引擎与个人娱乐工具。',
+    intent: '适合找游戏移植、在不同设备上玩游戏，以及研究游戏兼容性。',
+    keywords: ['game', 'games', 'gaming', 'emulator', 'nintendo', 'switch games', '游戏', '模拟器', '大富翁', 'astrology', 'divination', '术数', '排盘'],
+  },
+  {
+    name: '教育/学习',
+    description: '围绕教材、课程、练习与个性化辅导的学习工具。',
+    intent: '适合寻找学习辅导、课程练习和教育内容工具。',
+    keywords: ['tutor', 'tutoring', 'ai-tutor', 'education', 'educational', 'homework', 'curriculum', 'learning platform', 'personalized learning', '辅导', '教材', '课本', '教学', '蒙特梭利', 'historical atlas', 'historical map', '历史地图'],
+  },
+  {
+    name: '网站复刻/设计提取',
+    description: '参考已有网站重建界面，或提取网页的设计系统与样式。',
+    intent: '适合把参考网页转成可修改的前端原型，或提取设计规范。',
+    keywords: ['website-clone', 'website cloner', 'clone any website', 'website cloning', 'design extraction', 'design system extraction', 'design tokens', '网站复刻', '网页复刻', '克隆网站', '仿站', '设计提取'],
+  },
   {
     name: 'AI 代理/编码助手',
     description: '能自主执行任务、写代码、调用工具、操作浏览器或终端的 agent 项目。',
@@ -176,7 +194,6 @@ export const CATEGORY_DEFINITIONS: CategoryDefinition[] = [
       'bitcoin',
       'ethereum',
       'defi',
-      'market',
     ],
   },
   {
@@ -273,6 +290,11 @@ export const CATEGORY_DEFINITIONS: CategoryDefinition[] = [
       'markdown',
       'content',
       'podcast',
+      '短剧',
+      '漫剧',
+      '分镜',
+      'screenwriting',
+      'storyboard',
     ],
   },
 ]
@@ -387,23 +409,37 @@ export function getActivityStatus(repo: StarredRepository): ActivityStatus {
 }
 
 export function classifyRepo(repo: StarredRepository) {
-  const haystack = normalizeText(
-    [
-      repo.name,
-      repo.fullName,
-      repo.description ?? '',
-      repo.language ?? '',
-      ...repo.topics,
-    ].join(' '),
-  )
-
-  for (const definition of CATEGORY_DEFINITIONS) {
-    if (definition.keywords.some((keyword) => hasKeyword(haystack, keyword))) {
-      return definition
-    }
+  // Classify by what the project does, never by its implementation language.
+  const name = normalizeText(repo.name)
+  const description = normalizeText(repo.description ?? '')
+  const topics = normalizeText(repo.topics.join(' '))
+  const purpose = `${name} ${description} ${topics}`
+  const specific = [
+    ['网站复刻/设计提取', /website[ -]?(?:clon|recreat)|\b(?:clone|recreate).{0,32}\bwebsite\b|clone (?:any |a )?web|extract.{0,40}design system|design.{0,20}(?:tokens|extraction)|网页复刻|网站复刻|克隆网站|仿站/],
+    ['游戏/娱乐', /\b(?:games?|gaming|nintendo|astrology|divination|fortune-telling)\b|switch games|游戏|游戏模拟器|大富翁|紫微斗数|术数|排盘/],
+    ['媒体/内容处理', /短剧|漫剧|分镜|剧本|\b(?:screenwriting|storyboards?)\b|short[ -]drama|micro[ -]?drama|video (?:production|editing|generation)|视频(?:生成|制作|剪辑)|(?:音频|语音)(?:合成|转写)/],
+    ['自动化/MCP/工作流', /plugins? (?:market|marketplace)|extension marketplace|插件(?:市场|商店|管理)/],
+    ['教育/学习', /\b(?:tutor|tutoring|education|homework|curriculum)\b|learning platform|personalized learning|辅导|教材|课本|教学|蒙特梭利|historical (?:atlas|map)|历史.{0,10}(?:地图|时间轴)/],
+    ['学习资料/清单', /^(?:awesome|learn|tutorial|guide)[ -]|\btutorial\b|学习路线|教程|项目清单/],
+    ['数据/交易/金融', /time[ -]series|forecasting|\b(?:trading|backtest|quantitative|stock market)\b|量化|回测|股票/],
+  ] as const
+  for (const [category, pattern] of specific) {
+    if (pattern.test(purpose)) return getCategoryDefinition(category)
   }
 
-  return FALLBACK_CATEGORY
+  const scored = CATEGORY_DEFINITIONS.map((definition) => ({
+    definition,
+    score: definition.keywords.reduce((score, keyword) => {
+      const specificity = keyword.includes('-') || keyword.includes(' ') ? 2 : 1
+      return score + specificity * (
+        (hasKeyword(name, keyword) ? 4 : 0) +
+        (hasKeyword(topics, keyword) ? 3 : 0) +
+        (hasKeyword(description, keyword) ? 1 : 0)
+      )
+    }, 0),
+  })).sort((a, b) => b.score - a.score)
+
+  return scored[0]?.score ? scored[0].definition : FALLBACK_CATEGORY
 }
 
 function buildCurationNote(
@@ -411,19 +447,12 @@ function buildCurationNote(
   category: CategoryDefinition,
   activityStatus: ActivityStatus,
 ) {
-  const popularity =
-    repo.stargazersCount > 50000
-      ? '社区热度很高'
-      : repo.stargazersCount > 10000
-        ? '社区关注度高'
-        : repo.stargazersCount > 1000
-          ? '已有一定社区验证'
-          : '偏小众或早期项目'
+
   const topicText = repo.topics.slice(0, 3).join(' / ')
   const topicPart = topicText ? `；关键词：${topicText}` : ''
   const description = repo.description ? `简介：${repo.description}` : '简介：仓库没有填写描述'
 
-  return `${category.intent}${topicPart}。${description}。${popularity}，${statusCopy[activityStatus]}。`
+  return `${category.intent}${topicPart}。${description}。${statusCopy[activityStatus]}；以上仅按简介与标签初筛，未经功能实测。`
 }
 
 export function curateRepos(repos: StarredRepository[]): CuratedRepository[] {
@@ -433,7 +462,7 @@ export function curateRepos(repos: StarredRepository[]): CuratedRepository[] {
     const category = classifyRepo(repo)
     const recencyScore =
       pushedDaysAgo === null ? 0 : Math.max(0, 100 - Math.min(100, pushedDaysAgo / 9))
-    const popularityScore = Math.min(100, Math.log10(repo.stargazersCount + 1) * 20)
+    const metadataScore = (repo.description ? 50 : 0) + (repo.topics.length ? 30 : 0) + (repo.licenseName ? 20 : 0)
     const maintenancePenalty =
       activityStatus === 'archived' ? 35 : activityStatus === 'quiet' ? 16 : 0
 
@@ -447,7 +476,7 @@ export function curateRepos(repos: StarredRepository[]): CuratedRepository[] {
       pushedDaysAgo,
       signalScore: Math.max(
         0,
-        Math.round(recencyScore * 0.45 + popularityScore * 0.55 - maintenancePenalty),
+        Math.round(recencyScore * 0.45 + metadataScore * 0.55 - maintenancePenalty),
       ),
     }
   })

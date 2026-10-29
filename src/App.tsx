@@ -1,806 +1,163 @@
-import { useEffect, useMemo, useState, type Dispatch, type ReactNode, type SetStateAction } from 'react'
-import {
-  AlertCircle,
-  Archive,
-  ArrowDownUp,
-  BookOpen,
-  CheckCircle2,
-  ChevronRight,
-  CircleDot,
-  Code2,
-  Download,
-  ExternalLink,
-  Filter,
-  GitFork,
-  GitPullRequest,
-  KeyRound,
-  Layers,
-  RefreshCw,
-  Search,
-  Star,
-  X,
-  type LucideIcon,
-} from 'lucide-react'
+import { useDeferredValue, useMemo, useRef, useState } from 'react'
+import { ArrowDownToLine, ArrowUpFromLine, BookOpenCheck, Bookmark, CheckCircle2, ChevronDown, Clock3, Filter, FolderOpen, ExternalLink, ListFilter, Menu, RefreshCw, Search, Settings2, Star, X, XCircle } from 'lucide-react'
 import './App.css'
-import {
-  compactNumber,
-  countBy,
-  curateRepos,
-  formatDate,
-  formatRelativeDays,
-  getCategoryDefinition,
-  type ActivityStatus,
-  type CuratedRepository,
-} from './curation'
-import { fetchStarredRepositories, GitHubApiError } from './github'
-import { newestSnapshot, type SnapshotCache } from './snapshot'
-import type { StarredRepository, StarsSnapshot, SyncProgress } from './types'
+import { LibraryCard } from './components/LibraryCard'
+import { ProjectDetail } from './components/ProjectDetail'
+import { compactNumber, countBy, formatDate } from './curation'
+import { buildLibrary, SCENARIOS, searchLibrary, type LibraryRepository } from './discovery'
+import { categoryIcon, SCENE_ICONS } from './icons'
+import { loadPersonalLibrary, parsePersonalImport, PERSONAL_STATUS_LABELS, savePersonalLibrary, type PersonalEntry, type PersonalStatus } from './personal'
+import { useStarredLibrary } from './useStarredLibrary'
 
-const USERNAME = 'atxinsky'
-const CACHE_KEY = `github-stars-dashboard:${USERNAME}:stars:v1`
-const TOKEN_KEY = `github-stars-dashboard:${USERNAME}:token`
-const SELECTED_STATUSES: ActivityStatus[] = ['active', 'maintained', 'quiet', 'archived', 'fork']
+type Collection = 'all' | 'reviewed' | Exclude<PersonalStatus, 'unmarked'>
+type SortMode = 'editorial' | 'starred' | 'updated' | 'stars'
+const FEATURED = ['hkuds/deeptutor', 'seedds/nxnative', 'jcodesmore/ai-website-cloner-template']
+const CATEGORY_ORDER = ['AI 代理/编码助手', '教育/学习', '游戏/娱乐', '网站复刻/设计提取', '媒体/内容处理', '设计/UI/创意工具', '自动化/MCP/工作流', 'LLM 应用/RAG/模型', '数据/交易/金融', '移动/桌面应用', '开发工具/工程效率', '前端组件/网页产品', '学习资料/清单', '后端/基础设施', '安全/隐私', '其他/待整理']
+const COLLECTIONS = [{ id: 'all', label: '全部收藏', icon: FolderOpen }, { id: 'try', label: '待尝试', icon: Clock3 }, { id: 'used', label: '已用过', icon: CheckCircle2 }, { id: 'skip', label: '暂不考虑', icon: XCircle }] as const
 
-type GroupMode = 'category' | 'language' | 'activity' | 'owner'
-type SortMode = 'signal' | 'stars' | 'updated' | 'starred' | 'name'
-
-const statusLabels: Record<ActivityStatus, string> = {
-  active: '活跃',
-  maintained: '维护中',
-  quiet: '较久未更',
-  archived: '已归档',
-  fork: 'Fork',
+function downloadBackup(value: unknown) {
+  const url = URL.createObjectURL(new Blob([JSON.stringify(value, null, 2)], { type: 'application/json' }))
+  const link = document.createElement('a')
+  link.href = url
+  link.download = `atxinsky-工具库-${new Date().toISOString().slice(0, 10)}.json`
+  link.click()
+  setTimeout(() => URL.revokeObjectURL(url), 1000)
 }
 
-const groupLabels: Record<GroupMode, string> = {
-  category: '功能',
-  language: '语言',
-  activity: '状态',
-  owner: '作者',
-}
-
-const statusIcons: Record<ActivityStatus, LucideIcon> = {
-  active: CheckCircle2,
-  maintained: CircleDot,
-  quiet: AlertCircle,
-  archived: Archive,
-  fork: GitFork,
-}
-
-function loadCache(): SnapshotCache | null {
-  try {
-    const raw = localStorage.getItem(CACHE_KEY)
-    const cached = raw ? (JSON.parse(raw) as SnapshotCache) : null
-    return cached && Array.isArray(cached.repositories) ? cached : null
-  } catch {
-    return null
-  }
-}
-
-function saveCache(cache: SnapshotCache) {
-  try {
-    localStorage.setItem(CACHE_KEY, JSON.stringify(cache))
-  } catch {
-    // The page can still update when browser storage is full or unavailable.
-  }
-}
-
-function sortRepos(repos: CuratedRepository[], sortMode: SortMode) {
+function orderProjects(repos: LibraryRepository[], mode: SortMode) {
   return [...repos].sort((a, b) => {
-    if (sortMode === 'signal') {
-      return b.signalScore - a.signalScore || b.stargazersCount - a.stargazersCount
-    }
-
-    if (sortMode === 'stars') {
-      return b.stargazersCount - a.stargazersCount
-    }
-
-    if (sortMode === 'updated') {
-      return new Date(b.pushedAt ?? 0).getTime() - new Date(a.pushedAt ?? 0).getTime()
-    }
-
-    if (sortMode === 'starred') {
-      return new Date(b.starredAt ?? 0).getTime() - new Date(a.starredAt ?? 0).getTime()
-    }
-
-    return a.fullName.localeCompare(b.fullName)
+    if (mode === 'starred') return Date.parse(b.starredAt ?? '') - Date.parse(a.starredAt ?? '')
+    if (mode === 'updated') return Date.parse(b.pushedAt ?? '') - Date.parse(a.pushedAt ?? '')
+    if (mode === 'stars') return b.stargazersCount - a.stargazersCount
+    const aPinned = FEATURED.indexOf(a.fullName.toLowerCase())
+    const bPinned = FEATURED.indexOf(b.fullName.toLowerCase())
+    return (aPinned < 0 ? 100 : aPinned) - (bPinned < 0 ? 100 : bPinned)
+      || Number(b.reviewed) - Number(a.reviewed)
+      || Date.parse(b.starredAt ?? '') - Date.parse(a.starredAt ?? '')
   })
 }
 
-function groupRepos(repos: CuratedRepository[], groupMode: GroupMode) {
-  const groups = new Map<string, CuratedRepository[]>()
-
-  for (const repo of repos) {
-    const key =
-      groupMode === 'category'
-        ? repo.category
-        : groupMode === 'language'
-          ? repo.language || 'Unknown'
-          : groupMode === 'activity'
-            ? statusLabels[repo.activityStatus]
-            : repo.owner
-
-    groups.set(key, [...(groups.get(key) ?? []), repo])
-  }
-
-  return [...groups.entries()].sort((a, b) => b[1].length - a[1].length || a[0].localeCompare(b[0]))
-}
-
-function percentage(part: number, total: number) {
-  if (!total) {
-    return 0
-  }
-
-  return Math.round((part / total) * 100)
-}
-
-function downloadJson(repositories: StarredRepository[], generatedAt: string | null) {
-  const payload = {
-    username: USERNAME,
-    generatedAt,
-    count: repositories.length,
-    repositories,
-  }
-  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' })
-  const url = URL.createObjectURL(blob)
-  const link = document.createElement('a')
-  link.href = url
-  link.download = `${USERNAME}-github-stars.json`
-  link.click()
-  URL.revokeObjectURL(url)
-}
-
-function useBundledSnapshot(setSnapshot: Dispatch<SetStateAction<SnapshotCache>>) {
-  useEffect(() => {
-    const controller = new AbortController()
-    const cached = loadCache()
-    if (cached) {
-      setSnapshot((current) => newestSnapshot(current, cached))
-    }
-
-    fetch(`${import.meta.env.BASE_URL}stars-snapshot.json`, {
-      cache: 'no-store',
-      signal: controller.signal,
-    })
-      .then((response) => {
-        if (!response.ok) {
-          throw new Error('snapshot unavailable')
-        }
-        return response.json() as Promise<StarsSnapshot>
-      })
-      .then((snapshot) => {
-        if (controller.signal.aborted || !Array.isArray(snapshot.repositories)) return
-        const next = newestSnapshot(loadCache(), {
-          generatedAt: snapshot.generatedAt,
-          repositories: snapshot.repositories,
-        })
-        saveCache(next)
-        setSnapshot((current) => newestSnapshot(current, next))
-      })
-      .catch(() => {
-        // Keep cached or manually refreshed data when the server is unavailable.
-      })
-
-    return () => controller.abort()
-  }, [setSnapshot])
-}
-
-function StatCard({
-  icon: Icon,
-  label,
-  value,
-  detail,
-}: {
-  icon: LucideIcon
-  label: string
-  value: string
-  detail: string
-}) {
-  return (
-    <section className="stat-card">
-      <div className="stat-icon">
-        <Icon size={18} aria-hidden="true" />
-      </div>
-      <div>
-        <p className="meta-label">{label}</p>
-        <strong>{value}</strong>
-        <span>{detail}</span>
-      </div>
-    </section>
-  )
-}
-
-function FilterButton({
-  active,
-  children,
-  count,
-  onClick,
-}: {
-  active: boolean
-  children: ReactNode
-  count: number
-  onClick: () => void
-}) {
-  return (
-    <button className={`filter-button ${active ? 'is-active' : ''}`} type="button" onClick={onClick}>
-      <span>{children}</span>
-      <strong>{count}</strong>
-    </button>
-  )
-}
-
-function RepoRow({
-  repo,
-  selected,
-  onSelect,
-}: {
-  repo: CuratedRepository
-  selected: boolean
-  onSelect: () => void
-}) {
-  const StatusIcon = statusIcons[repo.activityStatus]
-
-  return (
-    <button
-      aria-label={`选择 ${repo.fullName}`}
-      aria-pressed={selected}
-      className={`repo-row ${selected ? 'is-selected' : ''}`}
-      data-repo-id={repo.id}
-      type="button"
-      onClick={onSelect}
-    >
-      <span className="repo-main">
-        <span className="repo-title-line">
-          <GitPullRequest size={16} aria-hidden="true" />
-          <strong>{repo.fullName}</strong>
-          {repo.archived ? <span className="tiny-tag">归档</span> : null}
-        </span>
-        <span className="repo-description">{repo.description || '没有简介'}</span>
-        <span className="repo-tags">
-          <span className="language-dot" data-language={repo.language || 'Unknown'} />
-          <span>{repo.language || '未知'}</span>
-          <span className="dot-separator" />
-          <StatusIcon size={13} aria-hidden="true" />
-          <span>{statusLabels[repo.activityStatus]}</span>
-          {repo.topics.slice(0, 4).map((repoTopic) => (
-            <span className="topic-tag" key={repoTopic}>
-              {repoTopic}
-            </span>
-          ))}
-        </span>
-      </span>
-      <span className="repo-metrics">
-        <span>
-          <Star size={14} aria-hidden="true" />
-          {compactNumber(repo.stargazersCount)}
-        </span>
-        <span>
-          <GitFork size={14} aria-hidden="true" />
-          {compactNumber(repo.forksCount)}
-        </span>
-        <span>{formatRelativeDays(repo.pushedDaysAgo)}</span>
-        <ChevronRight size={16} aria-hidden="true" />
-      </span>
-    </button>
-  )
-}
-
-function DetailPanel({ repo }: { repo: CuratedRepository | null }) {
-  if (!repo) {
-    return (
-      <aside className="detail-panel empty-panel">
-        <BookOpen size={24} aria-hidden="true" />
-        <h2>选择一个仓库</h2>
-        <p>点一行查看功能分类、简介、活跃度、标签和链接。</p>
-      </aside>
-    )
-  }
-
-  const StatusIcon = statusIcons[repo.activityStatus]
-
-  return (
-    <aside className="detail-panel">
-      <div className="detail-heading">
-        <span className="detail-mark">
-          <GitPullRequest size={20} aria-hidden="true" />
-        </span>
-        <div>
-          <p className="meta-label">{repo.category}</p>
-          <h2>{repo.name}</h2>
-          <a href={repo.htmlUrl} target="_blank" rel="noreferrer">
-            {repo.fullName}
-            <ExternalLink size={13} aria-hidden="true" />
-          </a>
-        </div>
-      </div>
-
-      <p className="detail-description">{repo.description || '没有可用简介。'}</p>
-
-      <div className="category-note">
-        <p className="meta-label">功能判断</p>
-        <strong>{repo.categoryDescription}</strong>
-        <span>{repo.curationNote}</span>
-      </div>
-
-      <div className="signal-meter">
-        <div>
-          <span>参考分</span>
-          <strong>{repo.signalScore}</strong>
-        </div>
-        <div className="meter-track" aria-hidden="true">
-          <span style={{ width: `${repo.signalScore}%` }} />
-        </div>
-      </div>
-
-      <dl className="detail-grid">
-        <div>
-          <dt>Stars</dt>
-          <dd>{compactNumber(repo.stargazersCount)}</dd>
-        </div>
-        <div>
-          <dt>Forks</dt>
-          <dd>{compactNumber(repo.forksCount)}</dd>
-        </div>
-        <div>
-          <dt>更新</dt>
-          <dd>{formatDate(repo.pushedAt)}</dd>
-        </div>
-        <div>
-          <dt>状态</dt>
-          <dd>
-            <StatusIcon size={14} aria-hidden="true" />
-            {statusLabels[repo.activityStatus]}
-          </dd>
-        </div>
-        <div>
-          <dt>许可证</dt>
-          <dd>{repo.licenseName || '未知'}</dd>
-        </div>
-        <div>
-          <dt>默认分支</dt>
-          <dd>{repo.defaultBranch || '未知'}</dd>
-        </div>
-      </dl>
-
-      <div className="topic-cloud">
-        {(repo.topics.length ? repo.topics : [repo.language || 'uncategorized']).map((repoTopic) => (
-          <span key={repoTopic}>{repoTopic}</span>
-        ))}
-      </div>
-
-      <div className="detail-actions">
-        <a href={repo.htmlUrl} target="_blank" rel="noreferrer">
-          <GitPullRequest size={16} aria-hidden="true" />
-          GitHub
-        </a>
-        {repo.homepage ? (
-          <a href={repo.homepage} target="_blank" rel="noreferrer">
-            <ExternalLink size={16} aria-hidden="true" />
-            Homepage
-          </a>
-        ) : null}
-      </div>
-    </aside>
-  )
-}
-
 function App() {
-  const [snapshot, setSnapshot] = useState<SnapshotCache>({ generatedAt: null, repositories: [] })
+  const { snapshot, token, setToken, syncing, progress, error, loading, refresh } = useStarredLibrary()
+  const [personal, setPersonal] = useState(loadPersonalLibrary)
+  const personalRef = useRef(personal)
+  const [personalRevision, setPersonalRevision] = useState(0)
+  const [collection, setCollection] = useState<Collection>('all')
+  const [category, setCategory] = useState('all')
+  const [scenario, setScenario] = useState('all')
   const [query, setQuery] = useState('')
-  const [language, setLanguage] = useState('All')
-  const [categoryFilter, setCategoryFilter] = useState('All')
-  const [topic, setTopic] = useState('All')
-  const [groupMode, setGroupMode] = useState<GroupMode>('category')
-  const [sortMode, setSortMode] = useState<SortMode>('signal')
-  const [selectedStatuses, setSelectedStatuses] = useState<Set<ActivityStatus>>(new Set(SELECTED_STATUSES))
+  const deferredQuery = useDeferredValue(query)
+  const [reviewedOnly, setReviewedOnly] = useState(false)
+  const [sort, setSort] = useState<SortMode>('editorial')
+  const [language, setLanguage] = useState('all')
+  const [verdict, setVerdict] = useState('all')
+  const [showFilters, setShowFilters] = useState(false)
+  const [showSettings, setShowSettings] = useState(false)
+  const [showCategories, setShowCategories] = useState(false)
   const [selectedId, setSelectedId] = useState<number | null>(null)
-  const [isSyncing, setIsSyncing] = useState(false)
-  const [syncProgress, setSyncProgress] = useState<SyncProgress | null>(null)
-  const [error, setError] = useState<string | null>(null)
-  const [token, setToken] = useState(() => localStorage.getItem(TOKEN_KEY) ?? '')
-  const [showToken, setShowToken] = useState(false)
+  const [mobileDetail, setMobileDetail] = useState(false)
+  const [limit, setLimit] = useState(30)
+  const [message, setMessage] = useState<{ text: string; error?: boolean } | null>(null)
+  const fileInput = useRef<HTMLInputElement>(null)
 
-  useBundledSnapshot(setSnapshot)
+  const library = useMemo(() => buildLibrary(snapshot.repositories), [snapshot.repositories])
+  const ordered = useMemo(() => orderProjects(library, sort), [library, sort])
+  const categories = useMemo(() => Object.entries(countBy(library.map((repo) => repo.category))).sort((a, b) => {
+    const aRank = CATEGORY_ORDER.indexOf(a[0])
+    const bRank = CATEGORY_ORDER.indexOf(b[0])
+    return (aRank < 0 ? 99 : aRank) - (bRank < 0 ? 99 : bRank) || b[1] - a[1]
+  }), [library])
+  const languages = useMemo(() => [...new Set(library.map((repo) => repo.language).filter((item): item is string => Boolean(item)))].sort(), [library])
+  const reviewedCount = library.filter((repo) => repo.reviewed).length
+  const personalCounts = useMemo(() => library.reduce((counts, repo) => {
+    const state = personal[repo.id]?.status
+    if (state && state !== 'unmarked') counts[state]++
+    return counts
+  }, { try: 0, used: 0, skip: 0 }), [library, personal])
+  const results = useMemo(() => searchLibrary(ordered, deferredQuery).filter((repo) =>
+    (collection === 'all' || collection === 'reviewed' && repo.reviewed || personal[repo.id]?.status === collection)
+    && (category === 'all' || repo.category === category)
+    && (scenario === 'all' || repo.review.scenarios.includes(scenario))
+    && (!reviewedOnly || repo.reviewed)
+    && (language === 'all' || repo.language === language)
+    && (verdict === 'all' || repo.review.verdict === verdict)
+  ), [ordered, deferredQuery, collection, personal, category, scenario, reviewedOnly, language, verdict])
+  const selectedRepo = results.find((repo) => repo.id === selectedId) ?? results[0] ?? null
+  const visibleResults = results.slice(0, limit)
+  const isFiltered = query || category !== 'all' || scenario !== 'all' || collection !== 'all' || reviewedOnly || language !== 'all' || verdict !== 'all'
 
-  const curated = useMemo(() => curateRepos(snapshot.repositories), [snapshot.repositories])
-  const languageCounts = useMemo(() => countBy(curated.map((repo) => repo.language || 'Unknown')), [curated])
-  const categoryCounts = useMemo(() => countBy(curated.map((repo) => repo.category)), [curated])
-  const statusCounts = useMemo(() => countBy(curated.map((repo) => repo.activityStatus)), [curated])
-  const categoryRows = useMemo(
-    () =>
-      Object.entries(categoryCounts)
-        .map(([name, count]) => ({ name, count, definition: getCategoryDefinition(name) }))
-        .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name)),
-    [categoryCounts],
-  )
-  const topicCounts = useMemo(() => {
-    const topics = curated.flatMap((repo) => (repo.topics.length ? repo.topics : []))
-    return Object.entries(countBy(topics)).sort((a, b) => b[1] - a[1]).slice(0, 12)
-  }, [curated])
+  function resetFilters() {
+    setQuery(''); setCategory('all'); setScenario('all'); setCollection('all')
+    setReviewedOnly(false); setLanguage('all'); setVerdict('all'); setLimit(30)
+  }
 
-  const filtered = useMemo(() => {
-    const normalizedQuery = query.trim().toLowerCase()
+  function chooseCollection(next: Collection) { resetFilters(); setCollection(next) }
 
-    return sortRepos(
-      curated.filter((repo) => {
-        const matchesQuery =
-          !normalizedQuery ||
-          [
-            repo.fullName,
-            repo.description ?? '',
-            repo.language ?? '',
-            repo.category,
-            repo.categoryDescription,
-            repo.curationNote,
-            ...repo.topics,
-          ]
-            .join(' ')
-            .toLowerCase()
-            .includes(normalizedQuery)
-        const matchesCategory = categoryFilter === 'All' || repo.category === categoryFilter
-        const matchesLanguage = language === 'All' || (repo.language || 'Unknown') === language
-        const matchesTopic = topic === 'All' || repo.topics.includes(topic)
-        const matchesStatus = selectedStatuses.has(repo.activityStatus)
-        return matchesQuery && matchesCategory && matchesLanguage && matchesTopic && matchesStatus
-      }),
-      sortMode,
-    )
-  }, [categoryFilter, curated, language, query, selectedStatuses, sortMode, topic])
+  function savePersonal(repo: LibraryRepository, patch: Partial<Pick<PersonalEntry, 'status' | 'note'>>) {
+    const current = personalRef.current
+    const entry = current[repo.id] ?? { status: 'unmarked' as PersonalStatus, note: '', updatedAt: '' }
+    const next = { ...current, [repo.id]: { ...entry, ...patch, updatedAt: new Date().toISOString() } }
+    personalRef.current = next
+    setPersonal(next)
+    const saved = savePersonalLibrary(next)
+    setMessage({ text: saved ? patch.note !== undefined ? '笔记已保存到当前浏览器。' : '收藏状态已保存。' : '当前浏览器无法保存记录，请及时导出备份。', error: !saved })
+  }
 
-  const groups = useMemo(() => groupRepos(filtered, groupMode), [filtered, groupMode])
-  const selectedRepo = useMemo(
-    () => filtered.find((repo) => repo.id === selectedId) ?? filtered[0] ?? null,
-    [filtered, selectedId],
-  )
-
-  const topCategory = categoryRows[0]
-  const designCount = categoryCounts['设计/UI/创意工具'] ?? 0
-  const activeTotal = (statusCounts.active ?? 0) + (statusCounts.maintained ?? 0)
-
-  async function refreshStars() {
-    setIsSyncing(true)
-    setError(null)
-    setSyncProgress(null)
-
+  async function importBackup(file: File | undefined) {
+    if (!file) return
     try {
-      if (token.trim()) {
-        localStorage.setItem(TOKEN_KEY, token.trim())
-      }
-
-      const repositories = await fetchStarredRepositories(USERNAME, token, setSyncProgress)
-      const next = { generatedAt: new Date().toISOString(), repositories }
-      setSnapshot(next)
-      saveCache(next)
-      setSelectedId(repositories[0]?.id ?? null)
-    } catch (caught) {
-      if (caught instanceof GitHubApiError) {
-        const reset = caught.resetAt ? ` Reset: ${caught.resetAt.toLocaleString()}` : ''
-        setError(`${caught.message}.${reset}`)
-      } else {
-        setError(caught instanceof Error ? caught.message : 'Sync failed')
-      }
-    } finally {
-      setIsSyncing(false)
-    }
+      if (file.size > 25 * 1024 * 1024) throw new Error('备份文件过大，请选择小于 25 MB 的 JSON 文件。')
+      const imported = parsePersonalImport(JSON.parse(await file.text()))
+      const next = { ...personalRef.current, ...imported }
+      personalRef.current = next
+      setPersonal(next)
+      setPersonalRevision((value) => value + 1)
+      const saved = savePersonalLibrary(next)
+      setMessage({ text: saved ? `已导入 ${Object.keys(imported).length} 条状态与笔记，同一项目以导入记录为准。` : '记录已载入，但浏览器无法持久保存，请保留备份。', error: !saved })
+    } catch (caught) { setMessage({ text: caught instanceof Error ? caught.message : '导入失败，请检查备份格式。', error: true }) }
+    if (fileInput.current) fileInput.current.value = ''
   }
 
-  function toggleStatus(status: ActivityStatus) {
-    setSelectedStatuses((current) => {
-      const next = new Set(current)
-      if (next.has(status)) {
-        next.delete(status)
-      } else {
-        next.add(status)
-      }
-      return next.size ? next : new Set(SELECTED_STATUSES)
-    })
-  }
-
-  const syncLabel = isSyncing
-    ? syncProgress
-      ? `Page ${syncProgress.page}${syncProgress.lastPage ? `/${syncProgress.lastPage}` : ''} · ${syncProgress.totalLoaded}`
-      : '正在更新'
-    : snapshot.generatedAt
-      ? `最后更新 ${formatDate(snapshot.generatedAt)}`
-      : '还没有加载快照'
+  const currentTitle = category !== 'all' ? category : scenario !== 'all' ? SCENARIOS.find((item) => item.id === scenario)?.label : collection === 'all' ? '全部项目' : collection === 'reviewed' ? '已核对项目说明' : PERSONAL_STATUS_LABELS[collection]
 
   return (
-    <main className="app-shell">
-      <aside className="sidebar">
-        <div className="brand-lockup">
-          <div className="brand-icon">
-            <Star size={20} aria-hidden="true" />
-          </div>
-          <div>
-            <h1>{USERNAME} stars</h1>
-            <p>{compactNumber(snapshot.repositories.length)} 个仓库</p>
-          </div>
-        </div>
-
-        <div className="sidebar-section">
-          <p className="meta-label">分组方式</p>
-          <div className="segmented-control">
-            {(['category', 'language', 'activity', 'owner'] as GroupMode[]).map((mode) => (
-              <button
-                className={groupMode === mode ? 'is-active' : ''}
-                key={mode}
-                type="button"
-                onClick={() => setGroupMode(mode)}
-              >
-                {groupLabels[mode]}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="sidebar-section">
-          <p className="meta-label">功能分类</p>
-          <div className="filter-stack">
-            <FilterButton
-              active={categoryFilter === 'All'}
-              count={curated.length}
-              onClick={() => setCategoryFilter('All')}
-            >
-              全部功能
-            </FilterButton>
-            {categoryRows.slice(0, 10).map(({ name, count }) => (
-              <FilterButton
-                active={categoryFilter === name}
-                count={count}
-                key={name}
-                onClick={() => setCategoryFilter(name)}
-              >
-                {name}
-              </FilterButton>
-            ))}
-          </div>
-        </div>
-
-        <div className="sidebar-section">
-          <p className="meta-label">状态</p>
-          <div className="status-stack">
-            {SELECTED_STATUSES.map((status) => {
-              const Icon = statusIcons[status]
-              return (
-                <button
-                  className={selectedStatuses.has(status) ? 'is-active' : ''}
-                  key={status}
-                  type="button"
-                  onClick={() => toggleStatus(status)}
-                >
-                  <Icon size={15} aria-hidden="true" />
-                  <span>{statusLabels[status]}</span>
-                  <strong>{statusCounts[status] ?? 0}</strong>
-                </button>
-              )
-            })}
-          </div>
-        </div>
-
-        <div className="sidebar-section">
-          <p className="meta-label">语言（辅助）</p>
-          <div className="filter-stack">
-            <FilterButton active={language === 'All'} count={curated.length} onClick={() => setLanguage('All')}>
-              All
-            </FilterButton>
-            {Object.entries(languageCounts)
-              .sort((a, b) => b[1] - a[1])
-              .slice(0, 10)
-              .map(([name, count]) => (
-                <FilterButton
-                  active={language === name}
-                  count={count}
-                  key={name}
-                  onClick={() => setLanguage(name)}
-                >
-                  {name}
-                </FilterButton>
-              ))}
-          </div>
-        </div>
+    <div className="library-shell">
+      <aside className="library-sidebar">
+        <div className="brand-lockup"><Star size={29} strokeWidth={1.8} /><div><strong>我的开源工具库</strong><p>atxinsky · GitHub 收藏</p></div></div>
+        <nav className="collection-nav" aria-label="我的清单">
+          {COLLECTIONS.map(({ id, label, icon: Icon }) => <button key={id} className={collection === id && category === 'all' && scenario === 'all' ? 'active' : ''} onClick={() => chooseCollection(id)}><Icon size={18} /><span>{label}</span><small>{id === 'all' ? library.length : personalCounts[id]}</small></button>)}
+        </nav>
+        <button className="mobile-category-toggle" onClick={() => setShowCategories(!showCategories)} aria-expanded={showCategories}><Menu size={16} />用途分类<ChevronDown size={14} /></button>
+        <div className={`category-nav${showCategories ? ' show' : ''}`}><p className="nav-label">按用途浏览</p>{categories.map(([name, count]) => { const Icon = categoryIcon(name); return <button key={name} className={category === name ? 'active' : ''} onClick={() => { resetFilters(); setCategory(name); setShowCategories(false) }} title={name}><Icon size={17} /><span>{name}</span><small>{count}</small></button> })}</div>
+        <div className="sidebar-bottom"><button onClick={() => chooseCollection('reviewed')}><BookOpenCheck size={16} />已核对说明 <strong>{reviewedCount}</strong></button><p><RefreshCw size={13} />快照 {snapshot.generatedAt ? formatDate(snapshot.generatedAt) : '读取中'}</p><a href="https://github.com/atxinsky?tab=stars" target="_blank" rel="noreferrer"><ExternalLink size={15} />在 GitHub 查看收藏</a><button onClick={() => setShowSettings(!showSettings)}><Settings2 size={15} />同步与备份设置</button></div>
       </aside>
 
-      <section className="workspace">
-        <header className="topbar">
-          <div className="search-field">
-            <Search size={17} aria-hidden="true" />
-            <input
-              aria-label="Search repositories"
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="搜索仓库、功能、主题"
-              value={query}
-            />
-            {query ? (
-              <button type="button" aria-label="清空搜索" onClick={() => setQuery('')}>
-                <X size={15} aria-hidden="true" />
-              </button>
-            ) : null}
-          </div>
+      <main className="library-workspace">
+        <header className="workspace-header"><div><h1>让收藏，真正用起来。</h1><p>看懂价值，按场景找到下一个趁手工具。</p></div><div className="header-actions"><button className="icon-button mobile-settings" aria-label="同步与备份设置" onClick={() => setShowSettings(!showSettings)}><Settings2 size={17} /></button><button className="ghost-button" onClick={() => downloadBackup({ version: 1, username: 'atxinsky', generatedAt: snapshot.generatedAt, exportedAt: new Date().toISOString(), personal, repositories: library })} disabled={!library.length}><ArrowDownToLine size={16} />导出清单</button><button className="primary-button" disabled={syncing} onClick={() => void refresh()}><RefreshCw size={16} className={syncing ? 'is-spinning' : ''} />{syncing ? '同步中' : '同步收藏'}</button></div></header>
 
-          <div className="topbar-actions">
-            <button className="ghost-button" type="button" onClick={() => setShowToken((value) => !value)}>
-              <KeyRound size={16} aria-hidden="true" />
-              Token
-            </button>
-            <button
-              className="ghost-button"
-              type="button"
-              onClick={() => downloadJson(snapshot.repositories, snapshot.generatedAt)}
-              disabled={!snapshot.repositories.length}
-            >
-              <Download size={16} aria-hidden="true" />
-              导出
-            </button>
-            <button className="primary-button" type="button" onClick={refreshStars} disabled={isSyncing}>
-              <RefreshCw className={isSyncing ? 'is-spinning' : ''} size={16} aria-hidden="true" />
-              更新
-            </button>
-          </div>
-        </header>
+        {showSettings ? <section className="settings-panel"><div><h2>同步与备份</h2><button className="icon-button" onClick={() => setShowSettings(false)} aria-label="关闭设置"><X size={16} /></button></div><label>GitHub Token（可选）<input type="password" value={token} onChange={(event) => setToken(event.target.value)} autoComplete="off" placeholder="留空也可同步公开收藏；Token 可提高 API 额度" /></label><p>同步时仅向 GitHub 发出请求。Token 仅保存在当前浏览器，不包含在导出清单中。</p><button className="ghost-button" onClick={() => fileInput.current?.click()}><ArrowUpFromLine size={15} />导入状态与笔记备份</button><p>笔记和使用状态仅属于当前浏览器，不会提交到公开网站。导入会合并记录，同一项目采用导入的状态和笔记。</p></section> : null}
+        <input ref={fileInput} type="file" accept="application/json,.json" hidden onChange={(event) => void importBackup(event.target.files?.[0])} />
+        {error ? <div className="notice error-notice" role="alert">{error}</div> : null}
+        {syncing && progress ? <div className="notice" role="status">正在同步第 {progress.page}{progress.lastPage ? ` / ${progress.lastPage}` : ''} 页，已读取 {progress.totalLoaded} 个项目…</div> : null}
+        {message ? <div className={`notice floating-notice${message.error ? ' error-notice' : ''}`} role={message.error ? 'alert' : 'status'}>{message.text}<button onClick={() => setMessage(null)} aria-label="关闭提示"><X size={14} /></button></div> : null}
 
-        {showToken ? (
-          <div className="token-row">
-            <KeyRound size={16} aria-hidden="true" />
-            <input
-              aria-label="GitHub token"
-              onChange={(event) => setToken(event.target.value)}
-              placeholder="GitHub token"
-              type="password"
-              value={token}
-            />
-            <button
-              type="button"
-              onClick={() => {
-                localStorage.removeItem(TOKEN_KEY)
-                setToken('')
-              }}
-            >
-              Clear
-            </button>
-          </div>
-        ) : null}
+        <div className="task-search"><Search size={22} /><input aria-label="按用途搜索项目" value={query} onChange={(event) => { setQuery(event.target.value); setLimit(30) }} placeholder="想做什么？试试「克隆网页」「资料出题」「Switch 游戏」" />{query ? <button className="icon-button" onClick={() => setQuery('')} aria-label="清空搜索"><X size={17} /></button> : null}<kbd>⌕</kbd></div>
+        <nav className="scenario-nav" aria-label="我想做什么">{SCENARIOS.map((item) => { const Icon = SCENE_ICONS[item.id as keyof typeof SCENE_ICONS] ?? Bookmark; return <button key={item.id} className={scenario === item.id ? 'active' : ''} title={item.description} onClick={() => { resetFilters(); setScenario(scenario === item.id ? 'all' : item.id) }}><Icon size={17} />{item.label}</button> })}</nav>
 
-        <section className="dashboard-head">
-          <div>
-            <p className="meta-label">来源 · github.com/{USERNAME}?tab=stars</p>
-            <h2>Stars 功能索引</h2>
-            <p>{syncLabel}</p>
-          </div>
-          <div className="sort-control">
-            <ArrowDownUp size={16} aria-hidden="true" />
-            <select
-              aria-label="排序仓库"
-              value={sortMode}
-              onChange={(event) => setSortMode(event.target.value as SortMode)}
-            >
-              <option value="signal">参考价值</option>
-              <option value="stars">Stars</option>
-              <option value="updated">最近更新</option>
-              <option value="starred">最近收藏</option>
-              <option value="name">名称</option>
-            </select>
-          </div>
+        <div className="results-toolbar"><div className="results-title"><h2>{currentTitle}</h2><span>{compactNumber(results.length)}</span>{isFiltered ? <button className="reset-button" onClick={resetFilters}>重置筛选</button> : null}</div><div className="results-controls"><label className="reviewed-toggle"><input type="checkbox" checked={reviewedOnly} onChange={(event) => { setReviewedOnly(event.target.checked); setLimit(30) }} /><span className="toggle-track" />已核对说明</label><button className={`filter-trigger${showFilters ? ' active' : ''}`} onClick={() => setShowFilters(!showFilters)} aria-expanded={showFilters}><Filter size={15} /><span>筛选</span></button><label className="sort-control"><ListFilter size={15} /><select aria-label="项目排序" value={sort} onChange={(event) => setSort(event.target.value as SortMode)}><option value="editorial">优先看点评</option><option value="starred">最近收藏</option><option value="updated">最近更新</option><option value="stars">GitHub 热度</option></select></label></div></div>
+        {showFilters ? <div className="advanced-filters"><label>编程语言<select aria-label="编程语言" value={language} onChange={(event) => { setLanguage(event.target.value); setLimit(30) }}><option value="all">全部语言</option>{languages.map((item) => <option key={item}>{item}</option>)}</select></label><label>采用建议<select aria-label="采用建议" value={verdict} onChange={(event) => { setVerdict(event.target.value); setLimit(30) }}><option value="all">全部建议</option>{['值得先试', '按需使用', '先观望'].map((item) => <option key={item}>{item}</option>)}</select></label><p>热度与维护记录只作参考，不代表软件质量。已核对说明的项目均保留原始来源。</p></div> : null}
+
+        <div className="discovery-layout"><section className="project-results" aria-label="项目搜索结果" aria-busy={loading && !library.length}>
+          {visibleResults.map((repo) => <LibraryCard key={repo.id} repo={repo} selected={selectedRepo?.id === repo.id} status={personal[repo.id]?.status ?? 'unmarked'} onSelect={() => { setSelectedId(repo.id); setMobileDetail(true) }} onTry={() => savePersonal(repo, { status: personal[repo.id]?.status === 'try' ? 'unmarked' : 'try' })} />)}
+          {!results.length ? <div className="empty-results"><Search size={30} /><h2>{loading ? '正在读取你的收藏…' : collection === 'try' ? '把想试的项目，放进这里。' : collection === 'used' ? '记录用过的工具，下次更好找。' : collection === 'skip' ? '暂时不适合的项目，可以先放这里。' : '还没有找到匹配的项目'}</h2><p>{collection !== 'all' ? '在项目详情中设置「我的状态」，就能整理自己的使用清单。' : '试试更短的任务词，比如「克隆网页」「资料出题」或项目名。'}</p>{!loading ? <button className="ghost-button" onClick={resetFilters}>查看全部收藏</button> : null}</div> : null}
+          {results.length > limit ? <button className="load-more" onClick={() => setLimit(limit + 30)}>再显示 {Math.min(30, results.length - limit)} 个项目 <ChevronDown size={15} /></button> : null}
+          {results.length ? <p className="list-footnote">{reviewedCount} 个项目已核对说明，其余为简介与标签初筛。具体效果仍以实际使用为准。</p> : null}
         </section>
-
-        {error ? (
-          <div className="alert-row">
-            <AlertCircle size={17} aria-hidden="true" />
-            <span>{error}</span>
-          </div>
-        ) : null}
-
-        <section className="stats-grid">
-          <StatCard
-            icon={Layers}
-            label="已索引"
-            value={compactNumber(curated.length)}
-            detail={`${filtered.length} 个当前可见`}
-          />
-          <StatCard
-            icon={Filter}
-            label="最大功能类"
-            value={topCategory?.name ?? '未知'}
-            detail={`${percentage(topCategory?.count ?? 0, curated.length)}% 的收藏`}
-          />
-          <StatCard
-            icon={Code2}
-            label="设计类"
-            value={`${designCount}`}
-            detail="UI / 设计 / 创意工具"
-          />
-          <StatCard
-            icon={CheckCircle2}
-            label="可参考"
-            value={`${percentage(activeTotal, curated.length)}%`}
-            detail={`${activeTotal} 个活跃或维护中`}
-          />
-        </section>
-
-        <section className="insights-row">
-          <div className="insight-panel">
-            <div className="panel-heading">
-              <Filter size={16} aria-hidden="true" />
-              <h3>功能分类</h3>
-            </div>
-            <div className="bar-list category-bar-list">
-              {categoryRows.slice(0, 8).map(({ name, count, definition }) => (
-                  <button
-                    className={categoryFilter === name ? 'is-active' : ''}
-                    key={name}
-                    type="button"
-                    onClick={() => setCategoryFilter(name)}
-                  >
-                    <span>
-                      <strong>{name}</strong>
-                      <small>{definition.description}</small>
-                    </span>
-                    <span className="bar-track" aria-hidden="true">
-                      <span style={{ width: `${percentage(count, curated.length)}%` }} />
-                    </span>
-                    <strong>{count}</strong>
-                  </button>
-                ))}
-            </div>
-          </div>
-
-          <div className="insight-panel">
-            <div className="panel-heading">
-              <Layers size={16} aria-hidden="true" />
-              <h3>主题标签</h3>
-            </div>
-            <div className="topic-filter-cloud">
-              <button className={topic === 'All' ? 'is-active' : ''} type="button" onClick={() => setTopic('All')}>
-                全部
-              </button>
-              {topicCounts.map(([name, count]) => (
-                <button
-                  className={topic === name ? 'is-active' : ''}
-                  key={name}
-                  type="button"
-                  onClick={() => setTopic(name)}
-                >
-                  {name}
-                  <span>{count}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        <div className="content-grid">
-          <section className="repo-list" aria-label="仓库列表">
-            {groups.length ? (
-              groups.map(([name, repos]) => (
-                <section className="repo-group" key={name}>
-                  <div className="group-heading">
-                    <h3>{name}</h3>
-                    <span>{repos.length}</span>
-                  </div>
-                  <div className="repo-group-list">
-                    {repos.map((repo) => (
-                      <RepoRow
-                        key={repo.id}
-                        repo={repo}
-                        selected={repo.id === selectedRepo?.id}
-                        onSelect={() => setSelectedId(repo.id)}
-                      />
-                    ))}
-                  </div>
-                </section>
-              ))
-            ) : (
-              <section className="empty-state">
-                <Search size={24} aria-hidden="true" />
-                <h3>没有匹配的仓库</h3>
-                <p>清空筛选或重新更新 GitHub 索引。</p>
-              </section>
-            )}
-          </section>
-
-          <DetailPanel repo={selectedRepo} />
+        {selectedRepo ? <ProjectDetail key={`${selectedRepo.id}-${personalRevision}`} repo={selectedRepo} entry={personal[selectedRepo.id]} mobileOpen={mobileDetail} onClose={() => setMobileDetail(false)} onSave={(patch) => savePersonal(selectedRepo, patch)} /> : <aside className="empty-detail"><BookOpenCheck size={32} /><h2>先找到，再看懂。</h2><p>项目的价值、使用场景、安装门槛和来源都会显示在这里。</p></aside>}
         </div>
-      </section>
-    </main>
+        <footer className="workspace-footer"><span>基于 atxinsky 的公开收藏 · 最后更新 {snapshot.generatedAt ? formatDate(snapshot.generatedAt) : '—'}</span><button onClick={() => setShowSettings(true)}>导入备份</button></footer>
+      </main>
+    </div>
   )
 }
 
