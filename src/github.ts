@@ -86,7 +86,7 @@ function normalizeStar(item: RawStarPayload): StarredRepository {
     archived: Boolean(repo.archived),
     fork: Boolean(repo.fork),
     disabled: Boolean(repo.disabled),
-    private: Boolean(repo.private),
+    private: repo.private !== false,
     licenseName: repo.license?.spdx_id ?? repo.license?.name ?? null,
     homepage: repo.homepage ?? null,
     defaultBranch: repo.default_branch ?? null,
@@ -155,15 +155,16 @@ async function fetchFromLocalApi(
     pages?: number
     rateLimit?: { remaining?: string | null }
   }
+  const repositories = payload.repositories.filter((repo) => repo.private === false)
 
   onProgress?.({
     page: payload.pages ?? 1,
     lastPage: payload.pages ?? null,
-    totalLoaded: payload.repositories.length,
+    totalLoaded: repositories.length,
     remaining: payload.rateLimit?.remaining ?? null,
   })
 
-  return payload.repositories
+  return repositories
 }
 
 export async function fetchStarredRepositories(
@@ -191,7 +192,8 @@ export async function fetchStarredRepositories(
   try {
     do {
       const result = await fetchStarPage(username, page, token)
-      repos.push(...result.repos)
+      // Keep the raw page intact for pagination; only public records enter application state.
+      repos.push(...result.repos.filter((repo) => !repo.private))
       lastPage = result.lastPage ?? lastPage
       onProgress?.({
         page,

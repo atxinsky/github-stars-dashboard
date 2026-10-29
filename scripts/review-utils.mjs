@@ -38,6 +38,14 @@ export function validRepository(repository) {
     && /^[a-z0-9][a-z0-9-]*\/[a-z0-9_.-]+$/i.test(repository.fullName)
 }
 
+export function assertPublicRepositories(repositories) {
+  if (!Array.isArray(repositories) || !repositories.every(validRepository)) throw new Error('Star snapshot contains invalid repositories')
+  if (repositories.some((repository) => repository.private !== false)) {
+    throw new Error('Public review pipeline refuses private or unverified repository visibility; no repository details were processed')
+  }
+  if (new Set(repositories.map((repository) => repository.id)).size !== repositories.length) throw new Error('Star snapshot contains duplicate repository IDs')
+}
+
 export async function mapConcurrent(items, concurrency, work) {
   const results = new Array(items.length)
   let next = 0

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { fetchStarredRepositories, GitHubApiError } from './github'
-import { newestSnapshot, type SnapshotCache } from './snapshot'
+import { newestSnapshot, publicSnapshot, type SnapshotCache } from './snapshot'
 import type { StarsSnapshot, SyncProgress } from './types'
 import { newestReviewCatalog, parseReviewCatalog, type ReviewCatalog } from './reviewCatalog'
 
@@ -15,12 +15,15 @@ function readStorage(key: string) {
 function cachedSnapshot(): SnapshotCache | null {
   try {
     const cached = JSON.parse(readStorage(CACHE_KEY) ?? 'null') as SnapshotCache | null
-    return cached && Array.isArray(cached.repositories) ? cached : null
+    if (!cached || !Array.isArray(cached.repositories)) return null
+    const clean = publicSnapshot(cached)
+    if (clean !== cached) saveSnapshot(clean)
+    return clean
   } catch { return null }
 }
 
 function saveSnapshot(snapshot: SnapshotCache) {
-  try { localStorage.setItem(CACHE_KEY, JSON.stringify(snapshot)) } catch { /* Display remains available. */ }
+  try { localStorage.setItem(CACHE_KEY, JSON.stringify(publicSnapshot(snapshot))) } catch { /* Display remains available. */ }
 }
 
 function cachedReviewCatalog(): ReviewCatalog | null {
@@ -100,7 +103,7 @@ export function useStarredLibrary() {
         else localStorage.removeItem(TOKEN_KEY)
       } catch { /* A storage restriction must not block synchronization. */ }
       const repositories = await fetchStarredRepositories('atxinsky', token, setProgress)
-      const next = { generatedAt: new Date().toISOString(), repositories }
+      const next = publicSnapshot({ generatedAt: new Date().toISOString(), repositories })
       saveSnapshot(next)
       setSnapshot(next)
     } catch (caught) {

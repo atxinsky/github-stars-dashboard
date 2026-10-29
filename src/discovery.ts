@@ -83,7 +83,7 @@ function initialReview(repo: CuratedRepository): EditorialReview {
 }
 
 export function buildLibrary(repos: StarredRepository[], catalog?: ReviewCatalog | null): LibraryRepository[] {
-  return curateRepos(repos).map((repo) => {
+  return curateRepos(repos.filter((repo) => repo.private === false)).map((repo) => {
     const editorial = EDITORIAL_REVIEWS[repo.fullName.toLowerCase()]
     const candidate = catalog?.reviews[repo.fullName.toLowerCase()]
     const generated = candidate?.provenance.repositoryId === repo.id ? candidate : undefined

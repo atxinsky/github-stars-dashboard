@@ -145,7 +145,7 @@ function normalizeStar(item: Record<string, unknown>) {
     archived: repo.archived === true,
     fork: repo.fork === true,
     disabled: repo.disabled === true,
-    private: repo.private === true,
+    private: repo.private !== false,
     licenseName: repo.license?.spdx_id || repo.license?.name || null,
     homepage: stringField(repo, 'homepage'),
     defaultBranch: stringField(repo, 'default_branch'),
@@ -187,7 +187,7 @@ async function fetchStarPage(username: string, page: number, token: string) {
   }
 }
 
-async function fetchAllStars(username: string, token: string) {
+export async function fetchAllStars(username: string, token: string) {
   const repositories = []
   let page = 1
   let lastPage: number | null = null
@@ -195,7 +195,8 @@ async function fetchAllStars(username: string, token: string) {
 
   do {
     const result = await fetchStarPage(username, page, token)
-    repositories.push(...result.repos)
+    // Pagination below uses the unfiltered page length, even if every record is private.
+    repositories.push(...result.repos.filter((repo) => !repo.private))
     lastPage = result.lastPage || lastPage
     latest.rateLimit = result.rateLimit
 

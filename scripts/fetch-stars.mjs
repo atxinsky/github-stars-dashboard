@@ -121,7 +121,7 @@ function normalizeStar(item) {
     archived: Boolean(repo.archived),
     fork: Boolean(repo.fork),
     disabled: Boolean(repo.disabled),
-    private: Boolean(repo.private),
+    private: repo.private !== false,
     licenseName: repo.license?.spdx_id || repo.license?.name || null,
     homepage: repo.homepage || null,
     defaultBranch: repo.default_branch || null,
@@ -174,7 +174,8 @@ async function main() {
 
   do {
     const result = await fetchPage(page)
-    allRepos.push(...result.repos)
+    // Filter before publication, while preserving raw page length for pagination below.
+    allRepos.push(...result.repos.filter((repo) => !repo.private))
     lastPage = result.lastPage || lastPage
     rateLimit = result.rateLimit
     console.log(`Fetched page ${page}${lastPage ? `/${lastPage}` : ''}`)

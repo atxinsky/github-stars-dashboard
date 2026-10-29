@@ -4,7 +4,7 @@ import path from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { promisify } from 'node:util'
 import { validateGeneratedReview } from '../src/reviewCatalog.ts'
-import { errorStatus, gitBlobSha, mapConcurrent, metadataHash, sourceHash, sourceReviewErrors, validRepository } from './review-utils.mjs'
+import { assertPublicRepositories, errorStatus, gitBlobSha, mapConcurrent, metadataHash, sourceHash, sourceReviewErrors } from './review-utils.mjs'
 
 const execFileAsync = promisify(execFile)
 
@@ -20,6 +20,7 @@ async function atomicJson(file, value) {
 }
 
 export async function fetchReadme(repository, run = execFileAsync, pause = (ms) => new Promise((resolve) => setTimeout(resolve, ms))) {
+  assertPublicRepositories([repository])
   const endpoint = `repos/${repository.fullName}/readme`
   for (let attempt = 0; attempt < 3; attempt += 1) {
     let readmeFound = false
@@ -59,9 +60,7 @@ export async function fetchReadme(repository, run = execFileAsync, pause = (ms) 
 
 export async function prepareReviewSources({ root = process.cwd(), force = false, fetchSource = fetchReadme, concurrency = 4 } = {}) {
   const snapshot = await readJson(path.join(root, 'public/stars-snapshot.json'))
-  if (!Array.isArray(snapshot?.repositories) || !snapshot.repositories.every(validRepository)) throw new Error('Star snapshot contains invalid repositories')
-  const ids = new Set(snapshot.repositories.map((repository) => repository.id))
-  if (ids.size !== snapshot.repositories.length) throw new Error('Star snapshot contains duplicate repository IDs')
+  assertPublicRepositories(snapshot?.repositories)
   let catalog = null
   try { catalog = await readJson(path.join(root, 'public/project-reviews.json'), true) }
   catch { console.warn('Existing review catalog is unreadable; its sources will be marked pending.') }

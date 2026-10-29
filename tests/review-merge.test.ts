@@ -15,7 +15,7 @@ const readme = 'A documented project for checking incremental review updates.'
 const timestamp = '2026-01-01T00:00:00Z'
 
 function project(id: number, fullName: string) {
-  return { id, fullName, description: 'A source-backed test project', topics: [], pushedAt: timestamp }
+  return { id, fullName, private: false, description: 'A source-backed test project', topics: [], pushedAt: timestamp }
 }
 
 function review(repository: ReturnType<typeof project>): GeneratedReview {
@@ -141,6 +141,30 @@ test('mismatched or invented evidence in a new batch cannot replace the catalog'
     await assert.rejects(runMerger(root, [file]), /Source identity mismatch/)
     await writeJson(file, { [repository.fullName]: { ...entry, sourceQuotes: ['An invented statement absent from the source.'] } })
     await assert.rejects(runMerger(root, [file]), /Unmatched source quotation/)
+    assert.deepEqual((await result(root)).reviews, {})
+  })
+})
+
+test('publication prune removes every review outside the current public snapshot without replaying cache', async () => {
+  await fixture(async (root) => {
+    const retained = project(1, 'owner/retained'), excluded = project(2, 'owner/excluded')
+    await previous(root, { [retained.fullName]: review(retained), [excluded.fullName]: review(excluded) })
+    await writeJson(path.join(root, 'public/stars-snapshot.json'), { repositories: [retained] })
+    await writeJson(path.join(root, '.cache/review-batches/old.json'), { [excluded.fullName]: review(excluded) })
+    await runMerger(root, ['--prune-only'])
+    assert.deepEqual(Object.keys((await result(root)).reviews), [retained.fullName])
+    const before = await readFile(path.join(root, 'public/project-reviews.json'), 'utf8')
+    await runMerger(root, ['--prune-only'])
+    assert.equal(await readFile(path.join(root, 'public/project-reviews.json'), 'utf8'), before)
+  })
+})
+
+test('publication prune accepts removal of all public stars', async () => {
+  await fixture(async (root) => {
+    const removed = project(1, 'owner/removed')
+    await previous(root, { [removed.fullName]: review(removed) })
+    await writeJson(path.join(root, 'public/stars-snapshot.json'), { repositories: [] })
+    await runMerger(root, ['--prune-only'])
     assert.deepEqual((await result(root)).reviews, {})
   })
 })

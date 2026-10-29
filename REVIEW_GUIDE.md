@@ -5,7 +5,7 @@
 ## 更新步骤
 
 1. 检查工作区，无冲突才拉取远端。用现有 GitHub 登录同步 `public/stars-snapshot.json`，不要记录或打印 token。
-2. 执行 `npm run prepare:reviews`。读取 `.cache/review-sources/index.json` 的 `needsReview`，逐个查看对应资料文件。缓存包含 README 原文、来源路径、SHA 和内容哈希。
+2. 只同步明确标为公开的仓库，私有仓库和可见性不明的记录不得读取 README、写评价或发布。先执行 `node --experimental-strip-types scripts/merge-review-batches.mjs --prune-only`，移除不在当前公开收藏中的评价，再执行 `npm run prepare:reviews`。读取 `.cache/review-sources/index.json` 的 `needsReview`，逐个查看对应资料文件。缓存包含 README 原文、来源路径、SHA 和内容哈希。
 3. 按 `src/reviewCatalog.ts` 的类型和校验规则编写 `public/project-reviews.json`。保留已有有效评价。`provenance.model` 填 `Codex`，`promptVersion` 填 `codex-readme-v1`。
 4. `npm run validate:reviews -- --strict`、`npm test`、`npm run lint`、`npm run build` 全部通过后，按 Lore 协议 commit、push，确认对应 Pages 工作流和线上数据。
 

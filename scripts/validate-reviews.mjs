@@ -2,7 +2,7 @@ import { readFile } from 'node:fs/promises'
 import path from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { parseReviewCatalog } from '../src/reviewCatalog.ts'
-import { sourceHash, sourceReviewErrors, validRepository } from './review-utils.mjs'
+import { assertPublicRepositories, sourceHash, sourceReviewErrors, validRepository } from './review-utils.mjs'
 
 async function readJson(file, optional = false) {
   try { return JSON.parse(await readFile(file, 'utf8')) }
@@ -11,10 +11,13 @@ async function readJson(file, optional = false) {
 
 export async function validateReviews({ root = process.cwd(), strict = false } = {}) {
   const snapshot = await readJson(path.join(root, 'public/stars-snapshot.json'))
-  if (!Array.isArray(snapshot?.repositories) || !snapshot.repositories.every(validRepository)) throw new Error('Star snapshot contains invalid repositories')
-  if (new Set(snapshot.repositories.map((repository) => repository.id)).size !== snapshot.repositories.length) throw new Error('Star snapshot contains duplicate repository IDs')
+  assertPublicRepositories(snapshot?.repositories)
   const value = await readJson(path.join(root, 'public/project-reviews.json'), true)
   const catalog = value ? parseReviewCatalog(value) : { version: 1, generatedAt: new Date().toISOString(), reviews: {} }
+  const publicNames = new Set(snapshot.repositories.map((repository) => repository.fullName.toLowerCase()))
+  if (Object.keys(catalog.reviews).some((key) => !publicNames.has(key))) {
+    throw new Error('Review catalog contains records outside the current public snapshot; prune obsolete records before publishing')
+  }
   const failures = []
   const pending = []
   let reviewed = 0
@@ -29,7 +32,7 @@ export async function validateReviews({ root = process.cwd(), strict = false } =
     if (entry.provenance.source === 'repository-metadata' && entry.sourceQuotes.length) failures.push(`${key}: metadata-only review must not quote an absent README`)
     const source = await readJson(path.join(root, '.cache/review-sources', `${repository.id}.json`), true)
     if (source) {
-      if (!validRepository(source.repository) || source.repository.id !== repository.id || typeof source.readme !== 'string'
+      if (!validRepository(source.repository) || source.repository.private !== false || source.repository.id !== repository.id || typeof source.readme !== 'string'
         || source.inputHash !== sourceHash(source.repository, source.readme)) {
         failures.push(`${key}: prepared source is invalid`)
       } else {

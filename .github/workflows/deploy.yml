@@ -46,6 +46,9 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_STARS_USER: atxinsky
 
+      - name: Keep only reviews in the current public stars snapshot
+        run: node --experimental-strip-types scripts/merge-review-batches.mjs --prune-only
+
       - name: Validate source-backed review catalog
         run: npm run validate:reviews
 
