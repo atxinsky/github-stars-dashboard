@@ -1488,3 +1488,10 @@ button:disabled {
     width: 36px;
   }
 }
+
+.card-hook { font-weight: 700; color: #b4532a; margin: 0 0 4px; }
+.card-more { font-size: 13px; line-height: 1.6; margin: 0 0 8px; }
+.card-more summary { cursor: pointer; color: #2f6fdb; font-weight: 600; }
+.card-more p { margin: 6px 0; }
+.card-highlights { margin: 6px 0; padding-left: 18px; }
+.card-facts { color: #777; font-size: 12px; }
